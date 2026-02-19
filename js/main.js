@@ -31,18 +31,24 @@ class Game {
     }
 
     startLoop() {
-        const tick = () => {
-            const now = Date.now();
-            const travelStatus = this.travelManager.update(now);
+    const tick = () => {
+        const now = Date.now();
+        const travelStatus = this.travelManager.update(now);
 
-            if (travelStatus) {
-                this.handleTravelStatus(travelStatus);
-            }
+        // [변경] 이동 상태 변화 처리
+        if (travelStatus) {
+            this.handleTravelStatus(travelStatus);
+        }
 
-            requestAnimationFrame(tick);
-        };
+        // [추가] 이동 중일 때는 게이지를 실시간으로 그리기 위해 UI 업데이트 호출
+        if (this.dataManager.state.travel.isMoving) {
+            this.updateUI();
+        }
+
         requestAnimationFrame(tick);
-    }
+    };
+    requestAnimationFrame(tick);
+ }
 
     updateUI() {
         const state = this.dataManager.state;
@@ -364,3 +370,4 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
