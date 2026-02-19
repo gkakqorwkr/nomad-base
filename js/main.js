@@ -150,10 +150,13 @@ class Game {
     /** 도감/인벤토리 메뉴 */
     openCollectionMenu() {
         const state = this.dataManager.state;
+        const foodInv = state.inventory.food || {};
+        const relicInv = state.inventory.relics || [];
+        const itemInv = state.inventory.items || {};
 
         let foodHtml = '<div class="inventory-grid">';
-        Object.keys(state.inventory.food).forEach(id => {
-            const count = state.inventory.food[id];
+        Object.keys(foodInv).forEach(id => {
+            const count = foodInv[id];
             const recipe = SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽' };
             foodHtml += `
                 <div class="inventory-slot" onclick="window.game.handleEat('${id}')">
@@ -163,15 +166,16 @@ class Game {
                 </div>
             `;
         });
+        if (Object.keys(foodInv).length === 0) foodHtml = '<p style="color:#666; padding:10px;">저장된 요리가 없습니다.</p>';
         foodHtml += '</div>';
 
         let relicHtml = '<div class="inventory-grid">';
         RELICS.forEach(r => {
-            const isOwned = state.inventory.relics.includes(r.id);
+            const isOwned = relicInv.includes(r.id);
             relicHtml += `
-                <div class="inventory-slot ${isOwned ? '' : 'locked'}" style="opacity:${isOwned ? 1 : 0.3}">
+                <div class="inventory-slot ${isOwned ? '' : 'locked'}" style="opacity:${isOwned ? 1 : 0.2}">
                     <div>${isOwned ? r.icon : '❓'}</div>
-                    <div style="font-size:0.55rem; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${isOwned ? r.name : ''}</div>
+                    <div style="font-size:0.55rem; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin-top:5px;">${isOwned ? r.name : ''}</div>
                 </div>
             `;
         });
@@ -179,8 +183,8 @@ class Game {
 
         // 합성 재료
         let itemsHtml = '<div class="inventory-grid" id="forge-selection">';
-        Object.keys(state.inventory.items).forEach(id => {
-            const count = state.inventory.items[id];
+        Object.keys(itemInv).forEach(id => {
+            const count = itemInv[id];
             itemsHtml += `
                 <div class="inventory-slot" onclick="window.game.toggleForgeItem('${id}', this)">
                     <div>🔩</div>
@@ -188,6 +192,7 @@ class Game {
                 </div>
             `;
         });
+        if (Object.keys(itemInv).length === 0) itemsHtml = '<p style="color:#666; padding:10px;">합성 재료가 없습니다.</p>';
         itemsHtml += '</div>';
 
         document.getElementById('modal-body').innerHTML = `

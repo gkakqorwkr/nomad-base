@@ -67,18 +67,18 @@ class DataManager {
             const savedData = localStorage.getItem(this.SAVE_KEY);
             if (savedData) {
                 const data = JSON.parse(savedData);
-                // v2 구조로의 마이그레이션 지원
-                if (!data.inventory || Array.isArray(data.inventory)) {
-                    const oldInv = Array.isArray(data.inventory) ? data.inventory : [];
-                    data.inventory = {
-                        ingredients: data.ingredients || {},
-                        items: {},
-                        food: {},
-                        relics: []
-                    };
-                    delete data.ingredients;
-                }
+                // v2 구조로의 마이그레이션 및 안전 점검
+                if (!data.inventory) data.inventory = {};
+                if (Array.isArray(data.inventory)) data.inventory = { relics: data.inventory };
+
+                // 필수 필드 강제 초기화 (누락 방지)
+                if (!data.inventory.ingredients) data.inventory.ingredients = {};
+                if (!data.inventory.items) data.inventory.items = {};
+                if (!data.inventory.food) data.inventory.food = {};
+                if (!data.inventory.relics) data.inventory.relics = [];
                 if (!data.stats) data.stats = { totalScavenges: 0, gachaCount: 0, relicsFound: 0 };
+                if (!data.discovered) data.discovered = { recipes: [], relics: [] };
+
                 return data;
             }
         } catch (e) {
