@@ -1,0 +1,25 @@
+@echo off
+chcp 65001 > nul
+echo --------------------------------------------------
+echo 냥똥줍기 자동 설치 및 실행 스크립트
+echo --------------------------------------------------
+
+echo 1. 필요한 라이브러리(pygame) 설치 확인 중...
+"C:\Users\A\AppData\Local\Programs\Python\Python312\python.exe" -m pip install pygame --user
+if %errorlevel% neq 0 (
+    echo [오류] 라이브러리 설치 중 문제가 발생했습니다.
+    pause
+    exit /b %errorlevel%
+)
+
+echo.
+echo 2. 게임 실행 중...
+"C:\Users\A\AppData\Local\Programs\Python\Python312\python.exe" main.py
+if %errorlevel% neq 0 (
+    echo [오류] 게임 실행 중 문제가 발생했습니다.
+    pause
+)
+
+echo.
+echo 게임이 종료되었습니다.
+pause

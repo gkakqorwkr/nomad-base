@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>노마드 베이스: 아포칼립스 서바이버</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="game-container">
+        <!-- 메인 배경 (사용자 제공 이미지 적용 구역) -->
+        <div id="background-layer"></div>
+
+        <!-- 상단 정보 바 -->
+        <header id="info-bar">
+            <div class="resource-item">고철: <span id="scrap-count">0</span></div>
+            <div class="resource-item">에너지: <span id="energy-count">100</span></div>
+        </header>
+
+        <!-- 중앙 게임 구역 (차량 내부 등) -->
+        <main id="game-viewport">
+            <div id="vehicle-interior">
+                <!-- 여기에 동료들이나 가구들이 배치됨 -->
+            </div>
+            <div id="notification-area"></div>
+        </main>
+
+        <!-- 하단 내비게이션 메뉴 (모바일 대응) -->
+        <footer id="nav-menu">
+            <button class="nav-btn" data-target="farming">파밍</button>
+            <button class="nav-btn" data-target="companions">동료</button>
+            <button class="nav-btn" data-target="cooking">요리</button>
+            <button class="nav-btn" data-target="upgrade">개조</button>
+            <button class="nav-btn" data-target="collection">도감</button>
+        </footer>
+
+        <!-- 팝업/모달 창 구역 -->
+        <div id="modal-container" class="hidden">
+            <div class="modal-content">
+                <button class="close-btn">&times;</button>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dataManager.js"></script>
+    <script src="js/regions.js"></script>
+    <script src="js/cooking.js"></script>
+    <script src="js/companions.js"></script>
+    <script src="js/farmingEngine.js"></script>
+    <script src="js/gachaManager.js"></script>
+    <script src="js/cookingManager.js"></script>
+    <script src="js/vehicleManager.js"></script>
+    <script src="js/travelEvents.js"></script>
+    <script src="js/travelManager.js"></script>
+    <script src="js/battleManager.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>

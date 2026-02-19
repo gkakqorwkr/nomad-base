@@ -1,0 +1,63 @@
+{
+    "companions": [
+        {
+            "id": "c1",
+            "name": "방랑하는 강아지",
+            "type": "animal",
+            "rarity": "Common",
+            "description": "버려진 도시를 배회하던 충직한 강아지입니다.",
+            "farming_bonus": 1.1,
+            "special_skill": "냄새 맡기 (기본 자원 발견 확률 +10%)"
+        },
+        {
+            "id": "c2",
+            "name": "기계공 한스",
+            "type": "human",
+            "rarity": "Common",
+            "description": "도구 만지는 솜씨가 제법인 고물상 청년입니다.",
+            "farming_bonus": 1.2,
+            "special_skill": "고물 수집 (금속 자원 추가 획득)"
+        },
+        {
+            "id": "c3",
+            "name": "변이된 까마귀",
+            "type": "animal",
+            "rarity": "Rare",
+            "description": "세 개의 눈을 가진 까마귀로, 먼 곳의 아이템을 찾아냅니다.",
+            "farming_bonus": 1.5,
+            "special_skill": "천안통 (희귀 아이템 발견 확률 +20%)"
+        },
+        {
+            "id": "c4",
+            "name": "전직 요리사 고든",
+            "type": "human",
+            "rarity": "Super Rare",
+            "description": "아포칼립스 식재료로도 최고의 맛을 내는 장인입니다.",
+            "farming_bonus": 2.0,
+            "special_skill": "절대 미각 (요리 결과값 2배 확률)"
+        }
+    ],
+    "items": [
+        {
+            "id": "i1",
+            "name": "오염된 고철",
+            "type": "resource",
+            "rarity": "Common",
+            "description": "차량 수리에 사용되는 기본적인 재료입니다."
+        },
+        {
+            "id": "i2",
+            "name": "문어좀비 다리",
+            "type": "ingredient",
+            "rarity": "Rare",
+            "description": "꿈틀거리는 생명력이 느껴지는 기괴한 요리 재료입니다."
+        },
+        {
+            "id": "i3",
+            "name": "방사능 식용유",
+            "type": "ingredient",
+            "rarity": "Common",
+            "description": "어둠 속에서 푸른 빛을 내는 식용유입니다."
+        }
+    ]
+}
