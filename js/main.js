@@ -1,372 +1,361 @@
 /**
- * 노마드 베이스 - 메인 엔트리 포인트 (비모듈 버전)
+ * 노마드 베이스 - 메인 게임 루프 및 UI 컨트롤러 (System 2.0)
  */
-// import { dataManager } from './dataManager.js';
 
 class Game {
     constructor() {
-        this.selectedIngredients = [];
-        this.updateInterval = null;
+        this.initializeManagers();
+        this.setupEventListeners();
+        this.startLoop();
     }
 
-    async init() {
-        console.log('Nomad Base: Starting initialization...');
-        const notify = document.getElementById('notification-area');
+    initializeManagers() {
+        // 전역 객체로 이미 생성된 매니저들 연결 확인
+        this.dataManager = window.dataManager;
+        this.farmingEngine = window.farmingEngine;
+        this.travelManager = window.travelManager;
+        this.vehicleManager = window.vehicleManager;
+        this.cookingManager = window.cookingManager;
+        this.gachaManager = window.gachaManager;
+        this.itemManager = window.itemManager;
 
-        // 1. 이벤트 바인딩 (최우선: 버튼 상호작용 보장)
-        try {
-            this.bindEvents();
-            console.log('Nomad Base: Events Bound');
-        } catch (e) {
-            console.error('Nomad Base: Event Binding Failed', e);
-        }
-
-        // 2. 각 시스템 엔진 시작 (개별 시도)
-        try {
-            farmingEngine.start();
-            console.log('Nomad Base: Farming Engine Started');
-        } catch (e) {
-            console.error('Nomad Base: Farming Engine Start Failed', e);
-        }
-
-        try {
-            this.startMainLoop();
-            this.updateUI();
-            console.log('Nomad Base: Main Loop & UI Updated');
-        } catch (e) {
-            console.error('Nomad Base: Core Logic Start Failed', e);
-        }
-
-        if (notify) {
-            notify.style.display = 'block';
-            notify.style.opacity = '1';
-            notify.textContent = "🚛 시스템 가동 완료! 고철 파밍을 시작합니다.";
-            setTimeout(() => { notify.style.opacity = '0'; }, 3000);
-        }
-        console.log('Nomad Base: Initialization Process Completed');
+        this.farmingEngine.start();
     }
 
-    startMainLoop() {
-        this.updateInterval = setInterval(() => {
-            const now = Date.now();
-            const travelRes = travelManager.update(now);
-
-            if (travelRes) {
-                if (travelRes.status === 'arrived') {
-                    alert(`${travelManager.getCurrentRegion().name}에 도착했습니다!`);
-                    this.updateUI();
-                } else if (travelRes.status === 'event_triggered') {
-                    this.triggerTravelEvent();
-                } else if (travelRes.status === 'boss_triggered') {
-                    this.triggerBossBattle(travelRes.boss);
-                }
-                this.updateTravelOverlay(travelRes);
-            }
-        }, 1000);
-    }
-
-    triggerBossBattle(boss) {
-        battleManager.startBattle(boss);
-        const modalContainer = document.getElementById('modal-container');
-        const modalBody = document.getElementById('modal-body');
-
-        modalBody.innerHTML = `
-            <div class="battle-container">
-                <div class="boss-display">
-                    <div class="boss-icon shaking" id="boss-visual">${boss.icon}</div>
-                    <h2 id="boss-name">${boss.name}</h2>
-                    <div class="hp-bar-container"><div class="hp-bar" id="boss-hp-bar"></div></div>
-                    <p id="boss-hp-text">HP: ${boss.hp} / ${boss.hp}</p>
-                </div>
-                <div class="attack-log" id="battle-log">길을 막는 자가 나타났습니다!</div>
-                <button class="battle-action-btn" id="btn-attack">차량 공격 가동!</button>
-            </div>
-        `;
-
-        modalContainer.classList.remove('hidden');
-        document.getElementById('btn-attack').onclick = () => this.handleAttack();
-    }
-
-    handleAttack() {
-        const res = battleManager.attack();
-        const hpBar = document.getElementById('boss-hp-bar');
-        const hpText = document.getElementById('boss-hp-text');
-        const log = document.getElementById('battle-log');
-        const bossVisual = document.getElementById('boss-visual');
-
-        bossVisual.style.filter = 'brightness(2) saturate(2)';
-        setTimeout(() => bossVisual.style.filter = '', 100);
-
-        if (res.status === 'hit' || res.status === 'win') {
-            const boss = battleManager.currentBoss;
-            hpBar.style.width = `${(battleManager.bossHp / boss.hp) * 100}%`;
-            hpText.textContent = `HP: ${battleManager.bossHp} / ${boss.hp}`;
-            log.textContent = `💥 보스에게 ${res.damage}의 피해를 입혔습니다!`;
-        }
-
-        if (res.status === 'win') {
-            log.textContent = `🏆 승리! 보성을 물리쳤습니다. 보상: ${res.reward}S`;
-            setTimeout(() => {
-                alert(`${res.reward} 고철을 획득하고 이동을 계속합니다.`);
-                document.getElementById('modal-container').classList.add('hidden');
-                travelManager.resumeAfterBattle();
-                this.updateUI();
-            }, 1500);
-        }
-    }
-
-    bindEvents() {
+    setupEventListeners() {
         window.addEventListener('gameUpdate', () => this.updateUI());
+        // 모달 닫기 (배경 클릭)
+        document.getElementById('modal-container').onclick = (e) => {
+            if (e.target.id === 'modal-container') this.closeModal();
+        };
+    }
 
-        const navButtons = document.querySelectorAll('.nav-btn');
-        navButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const target = btn.dataset.target;
-                if (target === 'cooking') this.selectedIngredients = [];
+    startLoop() {
+        const tick = () => {
+            const now = Date.now();
+            const travelStatus = this.travelManager.update(now);
 
-                switch (target) {
-                    case 'companions': this.openGachaMenu(); break;
-                    case 'collection': this.openCollectionMenu(); break;
-                    case 'cooking': this.openCookingMenu(); break;
-                    case 'upgrade': this.openUpgradeMenu(); break;
-                    case 'farming': this.openRegionMenu(); break;
-                }
-            });
-        });
+            if (travelStatus) {
+                this.handleTravelStatus(travelStatus);
+            }
 
-        const modalContainer = document.getElementById('modal-container');
-        const closeBtn = document.querySelector('.close-btn');
-        if (closeBtn) closeBtn.onclick = () => modalContainer.classList.add('hidden');
-        modalContainer.onclick = (e) => { if (e.target === modalContainer) modalContainer.classList.add('hidden'); };
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
     }
 
     updateUI() {
-        const state = dataManager.state;
-        const curReg = travelManager.getCurrentRegion();
-        const scrapEl = document.getElementById('scrap-count');
-        const energyEl = document.getElementById('energy-count');
+        const state = this.dataManager.state;
+        document.getElementById('scrap-value').textContent = Math.floor(state.resources.scrap);
+        document.getElementById('energy-value').textContent = Math.floor(state.resources.energy);
+        document.getElementById('region-name').textContent = this.travelManager.getCurrentRegion().name;
 
-        if (scrapEl) scrapEl.innerHTML = `${Math.floor(state.resources.scrap).toLocaleString()} <span style="font-size:0.75rem; color:#888;">(${curReg.name})</span>`;
-        if (energyEl) energyEl.textContent = Math.floor(state.resources.energy);
-
-        const isMoving = state.travel && state.travel.isMoving && !state.travel.isBattleActive;
-        const overlay = document.getElementById('travel-overlay');
-        if (isMoving) {
-            if (!overlay) this.createTravelOverlay();
-        } else if (overlay) {
-            overlay.remove();
+        // 이동 프로그레스바
+        const progress = document.getElementById('travel-progress');
+        const fill = document.getElementById('progress-bar-fill');
+        if (state.travel.isMoving) {
+            progress.classList.remove('hidden');
+            const total = state.travel.endTime - state.travel.startTime;
+            const current = Date.now() - state.travel.startTime;
+            fill.style.width = Math.min(100, (current / total) * 100) + '%';
+        } else {
+            progress.classList.add('hidden');
         }
     }
 
-    createTravelOverlay() {
-        const container = document.getElementById('game-container');
-        const overlay = document.createElement('div');
-        overlay.id = 'travel-overlay';
-        overlay.className = 'traveling-overlay';
-        overlay.innerHTML = `
-            <div class="truck-shaking" style="font-size:4rem;">🚚💨</div>
-            <h2 id="travel-dest-name">탐사 구역으로 이동 중</h2>
-            <div class="travel-progress-container"><div class="travel-progress-bar" id="travel-progress"></div></div>
-        `;
-        container.appendChild(overlay);
-    }
-
-    updateTravelOverlay(res) {
-        const bar = document.getElementById('travel-progress');
-        if (bar && res.progress) bar.style.width = `${res.progress * 100}%`;
-    }
-
-    openRegionMenu() {
-        const modalContainer = document.getElementById('modal-container');
-        const modalBody = document.getElementById('modal-body');
-        let listHtml = '<div class="region-list">';
-        REGIONS.forEach(reg => {
-            const isCurrent = dataManager.state.currentRegionId === reg.id;
-            const canUnlock = dataManager.state.resources.scrap >= reg.unlockCost;
-            listHtml += `<div class="region-card ${isCurrent ? 'current' : ''}">
-                <div class="region-info">
-                    <h4>${reg.name} ${reg.boss ? '💀' : ''}</h4>
-                    <p>${reg.desc}</p>
-                    <div class="region-stats">보너스: x${reg.bonus} | 보스: ${reg.boss ? reg.boss.name : '없음'}</div>
-                </div>
-                <button class="upgrade-btn ${canUnlock ? 'can-afford' : ''}" onclick="window.game.handleTravel('${reg.id}')" ${canUnlock && !isCurrent ? '' : 'disabled'}>${isCurrent ? '현재위치' : `${reg.unlockCost}S`}</button>
-            </div>`;
-        });
-        modalBody.innerHTML = `<div style="padding:20px;"><h2>🗺️ 탐사 지도</h2>${listHtml}</div>`;
-        modalContainer.classList.remove('hidden');
-    }
-
-    handleTravel(id) {
-        const res = travelManager.startTravel(id);
-        if (res.success) {
-            document.getElementById('modal-container').classList.add('hidden');
+    /** 수동 탐사 처리 */
+    handleScavenge() {
+        const result = this.farmingEngine.scavenge();
+        if (result.success) {
+            this.showToast(result.message);
             this.updateUI();
-        } else alert(res.message);
+        } else {
+            this.showToast(result.message, 'error');
+        }
     }
 
+    /** 가챠 메뉴 열기 */
     openGachaMenu() {
-        const state = dataManager.state;
-        const modalBody = document.getElementById('modal-body');
-        let listHtml = '';
-        state.companions.forEach(c => {
-            const rarityCode = c.rarity === 'Super Rare' ? 'SR' : (c.rarity === 'Rare' ? 'R' : 'C');
-            listHtml += `<div class="companion-card ${rarityCode}"><div class="comp-icon-large">${c.type === 'animal' ? '🐾' : '👤'}</div><div class="comp-info"><h4>${c.name} <span class="rarity-tag ${rarityCode.toLowerCase()}">${rarityCode}</span></h4><p>${c.desc}</p><div class="comp-bonus">🚀 파밍 효율 x${c.bonus}</div></div></div>`;
-        });
-        modalBody.innerHTML = `<div style="padding:15px;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"><h2>🤖 대원 본부 (${state.companions.length}/20)</h2><button class="roll-again-btn" style="padding:10px 20px; font-size:1rem;" onclick="window.game.handleRoll()">모집 (50S)</button></div><div class="companion-list" style="max-height:60vh; overflow-y:auto;">${listHtml || '<p style="text-align:center; padding:40px; color:#666;">아직 합류한 대원이 없습니다.</p>'}</div></div>`;
-        document.getElementById('modal-container').classList.remove('hidden');
-    }
+        const price = this.gachaManager.getCurrentPrice();
+        const count = this.dataManager.state.stats.gachaCount;
 
-    handleRoll() {
-        if (dataManager.state.resources.scrap < 50) { alert("자원이 부족합니다!"); return; }
-        dataManager.state.resources.scrap -= 50;
-        const res = gachaManager.roll();
-        this.showGachaEffect(res);
-        this.updateUI();
-    }
+        document.getElementById('modal-body').innerHTML = `
+            <div style="padding:20px; text-align:center;">
+                <h2>🤖 대원 본부 (HQ)</h2>
+                <p style="color:#aaa; margin:10px 0;">황무지의 유능한 생존자들을 포섭하세요.</p>
+                
+                <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:12px; margin:20px 0;">
+                    <div style="font-size:0.9rem; color:#888;">다음 모집 비용</div>
+                    <div style="font-size:2.5rem; color:var(--accent-color); font-weight:bold;">${price}S</div>
+                    <div style="font-size:0.8rem; color:#666; margin-top:5px;">(지금까지 ${count}회 모집함)</div>
+                    <button class="upgrade-btn" onclick="window.game.handleGacha()" style="margin-top:20px; width:150px;">모집 시작</button>
+                    <div style="font-size:0.8rem; color:#ff4444; margin-top:10px;">* 실패할 확률(30%)이 있습니다.</div>
+                </div>
 
-    showGachaEffect(companion) {
-        const modalBody = document.getElementById('modal-body');
-        const rStyle = companion.rarity === 'Super Rare' ? 'sr' : (companion.rarity === 'Rare' ? 'r' : 'c');
-        modalBody.innerHTML = `<div class="gacha-result"><div class="gacha-card ${rStyle}"><div class="rarity-tag ${rStyle}">${companion.rarity}</div><div style="font-size:5rem; margin:20px 0;">${companion.type === 'animal' ? '🐾' : '👤'}</div><h2 style="color:#fff; margin-bottom:10px;">${companion.name}</h2><p style="color:#aaa; font-size:0.9rem; padding:0 20px;">"${companion.desc}"</p><div style="margin-top:20px; color:var(--accent-color); font-weight:bold; font-size:1.2rem;">파밍 효율 +${(companion.bonus - 1).toFixed(2)}배</div></div><button class="roll-again-btn" onclick="window.game.openGachaMenu()">본부로 돌아가기</button></div>`;
-    }
-
-    openCollectionMenu() {
-        const recipes = cookingManager.getFullCollection();
-        const companions = COMPANION_POOL;
-        const state = dataManager.state;
-        let recipeGrid = '<div class="collection-grid">';
-        recipes.forEach(i => recipeGrid += `<div class="collection-item ${i.isDiscovered ? '' : 'locked'}"><div>${i.isDiscovered ? i.icon : '❓'}</div></div>`);
-        recipeGrid += '</div>';
-        let compGrid = '<div class="collection-grid">';
-        companions.forEach(c => {
-            const isOwned = state.companions.some(sc => sc.id === c.id);
-            compGrid += `<div class="collection-item ${isOwned ? '' : 'locked'}"><div>${isOwned ? (c.type === 'animal' ? '🐾' : '👤') : '👤'}</div></div>`;
-        });
-        compGrid += '</div>';
-        document.getElementById('modal-body').innerHTML = `<div style="padding:15px;"><h2>📜 생존 도감</h2><div class="collection-hint">새로운 요리와 동료를 찾아 아포칼립스 생존법을 완성하세요!</div><h3 style="margin:20px 0 10px;">🍲 발견한 요리 (${recipes.filter(x => x.isDiscovered).length}/${recipes.length})</h3>${recipeGrid}<h3 style="margin:20px 0 10px;">👤 합류한 대원 (${state.companions.length}/${companions.length})</h3>${compGrid}</div>`;
-        document.getElementById('modal-container').classList.remove('hidden');
-    }
-
-    /** 주방 메뉴 개편: 보유한 재료만 표시 */
-    openCookingMenu() {
-        this.selectedIngredients = [];
-        const state = dataManager.state;
-        const modalBody = document.getElementById('modal-body');
-
-        modalBody.innerHTML = `
-            <div class="cooking-ui">
-                <h2>🍳 주방</h2>
-                <div class="collection-hint">탐사를 통해 획득한 재료로 요리할 수 있습니다. <br>재료 2개를 선택하세요.</div>
-                <div id="cook-slots" style="font-size:2rem; margin:10px;">??</div>
-                <button class="cooking-btn roll-again-btn" style="width:100%; margin-bottom:20px;" onclick="window.game.handleCook()">조리 시작</button>
-                <h3>📥 신선한 재료 (보유 중)</h3>
-                <div class="inventory-grid" id="inv-grid"></div>
+                <div id="companion-list" style="max-height:30vh; overflow-y:auto; border-top:1px solid #333; padding-top:15px;">
+                    <!-- 보유 동료 목록 -->
+                </div>
             </div>
         `;
-
-        const grid = document.getElementById('inv-grid');
-        let hasIngredients = false;
-
-        Object.keys(state.ingredients).forEach(id => {
-            const count = state.ingredients[id];
-            if (count > 0) {
-                hasIngredients = true;
-                const div = document.createElement('div');
-                div.className = 'inventory-slot';
-                div.innerHTML = `<div>${INGREDIENTS[id].icon}</div><div style="font-size:0.7rem; color:#fff;">${count}</div>`;
-                div.onclick = () => {
-                    if (this.selectedIngredients.includes(id)) {
-                        this.selectedIngredients = this.selectedIngredients.filter(x => x !== id);
-                        div.style.borderColor = '';
-                    } else if (this.selectedIngredients.length < 2) {
-                        this.selectedIngredients.push(id);
-                        div.style.borderColor = 'var(--accent-color)';
-                    }
-                    document.getElementById('cook-slots').textContent = this.selectedIngredients.map(i => INGREDIENTS[i].icon).join(' ') || '??';
-                };
-                grid.appendChild(div);
-            }
-        });
-
-        if (!hasIngredients) {
-            grid.innerHTML = '<p style="grid-column: span 4; padding:20px; color:#666;">보유 중인 재료가 없습니다. 탐사를 진행하세요!</p>';
-        }
-
+        this.renderCompanionList();
         document.getElementById('modal-container').classList.remove('hidden');
+    }
+
+    handleGacha() {
+        const result = this.gachaManager.roll();
+        if (result.success) {
+            if (result.isFail) {
+                this.showGachaEffect(null, true);
+            } else {
+                this.showGachaEffect(result.companion);
+            }
+        } else {
+            this.showToast(result.message, 'error');
+        }
+    }
+
+    /** 가챠 연출 */
+    showGachaEffect(companion, isFail = false) {
+        const modalBody = document.getElementById('modal-body');
+        const effectClass = isFail ? 'gacha-effect-fail' : this.gachaManager.getRarityEffectClass(companion.rarity);
+
+        modalBody.innerHTML = `
+            <div class="gacha-reveal ${effectClass}" style="padding:40px; text-align:center; height:100%;">
+                <div class="gacha-card scale-up">
+                    <div style="font-size:5rem;">${isFail ? '🔩' : (companion.type === 'animal' ? '🐾' : '👤')}</div>
+                    <h2 style="margin-top:20px;">${isFail ? '고물 더미' : companion.name}</h2>
+                    <p style="color:#ddd; margin:10px 0;">${isFail ? '대원은 없고 쓸모없는 부품만 찾았습니다.' : companion.desc}</p>
+                    ${isFail ? '' : `<div style="color:var(--accent-color); font-weight:bold;">보너스: ${companion.effect} x${companion.bonus}</div>`}
+                    <button class="upgrade-btn" onclick="window.game.openGachaMenu()" style="margin-top:30px;">확인</button>
+                </div>
+            </div>
+        `;
+    }
+
+    /** 요리 메뉴 (이미 cookingManager에 정의됨) */
+    openCookingMenu() {
+        this.cookingManager.openCookingMenu();
     }
 
     handleCook() {
-        if (this.selectedIngredients.length < 2) {
-            alert("재료를 2개 선택해주세요!");
-            return;
-        }
-        const res = cookingManager.cook(this.selectedIngredients);
-        if (res.success) {
-            this.showCookingResult(res);
-            this.updateUI();
+        const result = this.cookingManager.cook(this.cookingManager.selectedIngredients);
+        if (result.success) {
+            this.showToast(`${result.dish.icon} ${result.dish.name} 제작 완료! (창고에 보관됨)`);
+            this.openCookingMenu(); // 갱신
         } else {
-            alert(res.message);
+            this.showToast(result.message, 'error');
         }
     }
 
-    showCookingResult(dish) {
-        const modalBody = document.getElementById('modal-body');
-        modalBody.innerHTML = `
-            <div style="text-align:center; padding:30px;">
-                <div style="font-size:5rem; margin-bottom:20px; animation: popIn 0.5s;">${dish.icon}</div>
-                <h2 style="color:var(--accent-color);">${dish.name} 완성!</h2>
-                <p style="margin:15px 0;">"${dish.desc}"</p>
-                <div class="collection-hint" style="font-size:1.1rem;">✨ 효과: ${dish.effect}</div>
-                <button class="roll-again-btn" style="width:100%;" onclick="window.game.openCookingMenu()">주방으로 돌아가기</button>
+    /** 도감/인벤토리 메뉴 */
+    openCollectionMenu() {
+        const state = this.dataManager.state;
+
+        let foodHtml = '<div class="inventory-grid">';
+        Object.keys(state.inventory.food).forEach(id => {
+            const count = state.inventory.food[id];
+            const recipe = SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽' };
+            foodHtml += `
+                <div class="inventory-slot" onclick="window.game.handleEat('${id}')">
+                    <div>${recipe.icon}</div>
+                    <div class="slot-count">${count}</div>
+                    <div style="font-size:0.6rem; color:#aaa; margin-top:2px;">먹기</div>
+                </div>
+            `;
+        });
+        foodHtml += '</div>';
+
+        let relicHtml = '<div class="inventory-grid">';
+        RELICS.forEach(r => {
+            const isOwned = state.inventory.relics.includes(r.id);
+            relicHtml += `
+                <div class="inventory-slot ${isOwned ? '' : 'locked'}" style="opacity:${isOwned ? 1 : 0.3}">
+                    <div>${isOwned ? r.icon : '❓'}</div>
+                    <div style="font-size:0.55rem; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${isOwned ? r.name : ''}</div>
+                </div>
+            `;
+        });
+        relicHtml += '</div>';
+
+        // 합성 재료
+        let itemsHtml = '<div class="inventory-grid" id="forge-selection">';
+        Object.keys(state.inventory.items).forEach(id => {
+            const count = state.inventory.items[id];
+            itemsHtml += `
+                <div class="inventory-slot" onclick="window.game.toggleForgeItem('${id}', this)">
+                    <div>🔩</div>
+                    <div class="slot-count">${count}</div>
+                </div>
+            `;
+        });
+        itemsHtml += '</div>';
+
+        document.getElementById('modal-body').innerHTML = `
+            <div style="padding:15px;">
+                <h2>📜 생존 가방</h2>
+                
+                <h3 style="margin:15px 0 10px;">🍞 식품 보관함 (클릭 시 섭취)</h3>
+                ${foodHtml}
+
+                <h3 style="margin:20px 0 10px;">🗿 발견한 유물 (${state.inventory.relics.length}/30)</h3>
+                ${relicHtml}
+
+                <h3 style="margin:20px 0 10px;">⚒️ 아이템 합성 (재료 3개 선택)</h3>
+                <div style="background:rgba(255,165,0,0.1); padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
+                    <span id="forge-count">선택: 0/3</span>
+                    <button class="upgrade-btn" onclick="window.game.handleSynthesis()" style="font-size:0.7rem; padding:4px 10px;">합성 실행 (100S)</button>
+                </div>
+                ${itemsHtml}
             </div>
         `;
+        this.forgeSelected = [];
+        document.getElementById('modal-container').classList.remove('hidden');
+    }
+
+    handleEat(foodId) {
+        const result = this.cookingManager.eat(foodId);
+        if (result.success) {
+            this.showToast(`에너지가 ${result.amount} 회복되었습니다!`);
+            this.openCollectionMenu(); // 갱신
+        }
+    }
+
+    /** 합성용 아이템 선택 */
+    toggleForgeItem(id, el) {
+        if (this.forgeSelected.includes(id)) {
+            this.forgeSelected = this.forgeSelected.filter(x => x !== id);
+            el.style.borderColor = '';
+        } else if (this.forgeSelected.length < 3) {
+            this.forgeSelected.push(id);
+            el.style.borderColor = 'var(--accent-color)';
+        }
+        document.getElementById('forge-count').textContent = `선택: ${this.forgeSelected.length}/3`;
+    }
+
+    handleSynthesis() {
+        const result = this.itemManager.synthesize(this.forgeSelected);
+        if (result.success) {
+            this.showToast(`💎 합성 결과: ${result.result.icon} ${result.result.name}!`);
+            this.openCollectionMenu();
+        } else {
+            this.showToast(result.message, 'error');
+        }
+    }
+
+    /** 기타 UI 함수들 */
+    openRegionMenu() {
+        let list = '';
+        REGIONS.forEach(r => {
+            const isCurrent = this.dataManager.state.currentRegionId === r.id;
+            list += `
+                <div class="upgrade-card" style="opacity:${isCurrent ? 1 : 0.8}; border-color:${isCurrent ? 'var(--accent-color)' : ''}">
+                    <h4>${r.name}</h4>
+                    <p style="font-size:0.8rem; color:#aaa;">${r.desc}</p>
+                    <button class="upgrade-btn" onclick="window.game.handleTravel('${r.id}')" ${isCurrent ? 'disabled' : ''}>
+                        ${isCurrent ? '현재 위치' : '이동'}
+                    </button>
+                </div>
+            `;
+        });
+        document.getElementById('modal-body').innerHTML = `<div style="padding:20px;"><h2>🗺️ 지역 이동</h2>${list}</div>`;
+        document.getElementById('modal-container').classList.remove('hidden');
+    }
+
+    handleTravel(id) {
+        const result = this.travelManager.startTravel(id);
+        if (result.success) {
+            this.showToast(result.message);
+            this.closeModal();
+        } else {
+            this.showToast(result.message, 'error');
+        }
     }
 
     openUpgradeMenu() {
-        const summary = vehicleManager.getVehicleSummary();
-        let list = '<div class="upgrade-list" style="max-height:60vh; overflow-y:auto;">';
+        this.vehicleManager.openUpgradeMenu ? this.vehicleManager.openUpgradeMenu() : this.renderUpgradeMenu();
+    }
 
+    // fallback용
+    renderUpgradeMenu() {
+        const summary = this.vehicleManager.getVehicleSummary();
+        let list = '<div class="upgrade-list" style="max-height:60vh; overflow-y:auto;">';
         summary.forEach(p => {
             const cur = p.current;
             const nxt = p.next;
-
             list += `
-                <div class="upgrade-card" style="display:block; padding:15px; border-bottom:1px solid #444;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h4 style="margin:0;">${p.icon} ${p.name} (Lv.${cur.level})</h4>
-                        <button class="upgrade-btn ${dataManager.state.resources.scrap >= (nxt ? nxt.cost : Infinity) ? 'can-afford' : ''}" 
-                                onclick="window.game.handleUpgrade('${p.key}')" 
-                                ${nxt ? '' : 'disabled'}
-                                style="padding:5px 15px;">
+                <div class="upgrade-card" style="padding:15px; border-bottom:1px solid #444;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <h4>${p.icon} ${p.name} (Lv.${cur.level})</h4>
+                        <button class="upgrade-btn ${this.dataManager.state.resources.scrap >= (nxt ? nxt.cost : Infinity) ? 'can-afford' : ''}" 
+                                onclick="window.game.handleUpgrade('${p.key}')" ${nxt ? '' : 'disabled'}>
                             ${nxt ? `${nxt.cost}S` : 'MAX'}
                         </button>
                     </div>
-                    <div style="font-size:0.85rem; color:#aaa; margin-top:8px;">${cur.name} &gt; ${nxt ? nxt.name : '최고 단계'}</div>
-                    <div style="margin-top:5px; font-weight:bold; color:var(--accent-color);">
-                        ${p.effectName}: ${cur.bonus}${p.unit} 
-                        ${nxt ? ` <span style="color:#fff;">➔</span> ${nxt.bonus}${p.unit}` : ' (최대)'}
+                    <div style="font-size:0.8rem; color:var(--accent-color); margin-top:5px;">
+                        ${p.effectName}: ${cur.bonus}${p.unit} ${nxt ? `➔ ${nxt.bonus}${p.unit}` : '(최대)'}
                     </div>
                 </div>
             `;
         });
-
-        document.getElementById('modal-body').innerHTML = `
-            <div style="padding:15px;">
-                <h2 style="margin-bottom:15px;">🔧 차량 개조 본부</h2>
-                <div class="collection-hint">엔진은 이동을 빠르게, 장갑은 피해를 줄여줍니다.</div>
-                ${list}
-            </div>
-        `;
+        document.getElementById('modal-body').innerHTML = `<div style="padding:15px;"><h2>🔧 차량 개조</h2>${list}</div>`;
         document.getElementById('modal-container').classList.remove('hidden');
     }
+
     handleUpgrade(key) {
-        const res = vehicleManager.upgradePart(key);
-        alert(res.message); this.openUpgradeMenu(); this.updateUI();
+        const result = this.vehicleManager.upgradePart(key);
+        if (result.success) {
+            this.showToast(result.message);
+            this.renderUpgradeMenu();
+        } else {
+            this.showToast(result.message, 'error');
+        }
+    }
+
+    handleTravelStatus(status) {
+        if (status.status === 'arrived') {
+            this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
+        } else if (status.status === 'event_triggered') {
+            this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
+        }
+    }
+
+    renderCompanionList() {
+        const companions = this.dataManager.state.companions;
+        const target = document.getElementById('companion-list');
+        if (!target) return;
+
+        if (companions.length === 0) {
+            target.innerHTML = '<p style="color:#666;">합류한 대원이 없습니다.</p>';
+            return;
+        }
+
+        let html = '';
+        companions.forEach(c => {
+            html += `
+                <div style="display:flex; align-items:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:8px;">
+                    <div style="font-size:2rem; margin-right:15px;">${c.type === 'animal' ? '🐾' : '👤'}</div>
+                    <div style="flex:1; text-align:left;">
+                        <div style="font-weight:bold;">${c.name} <span style="font-size:0.7rem; color:#888;">[${c.rarity}]</span></div>
+                        <div style="font-size:0.7rem; color:var(--accent-color);">${c.effect} x${c.bonus}</div>
+                    </div>
+                </div>
+            `;
+        });
+        target.innerHTML = html;
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    closeModal() {
+        document.getElementById('modal-container').classList.add('hidden');
     }
 }
 
-window.onerror = function (msg, url, line) { alert("오류 발생: " + msg + "\n위치: " + line); return false; };
+// GUI 초기화 및 전역 할당
 window.game = new Game();
-if (document.readyState === 'complete' || document.readyState === 'interactive') { window.game.init(); }
-else { window.addEventListener('DOMContentLoaded', () => window.game.init()); }

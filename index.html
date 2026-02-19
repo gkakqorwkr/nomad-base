@@ -3,52 +3,63 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>노마드 베이스: 아포칼립스 서바이버</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Nomad Base - 아포칼립스 트럭 기지</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
+    <!-- 게임 전체 컨테이너 -->
     <div id="game-container">
-        <!-- 메인 배경 (사용자 제공 이미지 적용 구역) -->
-        <div id="background-layer"></div>
+        <!-- 상단 리소스 바 -->
+        <div id="resource-bar">
+            <span>고철: <strong id="scrap-value">0</strong></span>
+            <span>에너지: <strong id="energy-value">100</strong></span>
+        </div>
 
-        <!-- 상단 정보 바 -->
-        <header id="info-bar">
-            <div class="resource-item">고철: <span id="scrap-count">0</span></div>
-            <div class="resource-item">에너지: <span id="energy-count">100</span></div>
-        </header>
-
-        <!-- 중앙 게임 구역 (차량 내부 등) -->
-        <main id="game-viewport">
-            <div id="vehicle-interior">
-                <!-- 여기에 동료들이나 가구들이 배치됨 -->
+        <!-- 메인 시뮬레이션 영역 (트럭 배경) -->
+        <div id="main-view">
+            <div id="truck-animation">
+                <div class="truck-body">🚛</div>
+                <div class="wheel wheel-left">⚙️</div>
+                <div class="wheel wheel-right">⚙️</div>
             </div>
-            <div id="notification-area"></div>
-        </main>
 
-        <!-- 하단 내비게이션 메뉴 (모바일 대응) -->
-        <footer id="nav-menu">
-            <button class="nav-btn" data-target="farming">파밍</button>
-            <button class="nav-btn" data-target="companions">동료</button>
-            <button class="nav-btn" data-target="cooking">요리</button>
-            <button class="nav-btn" data-target="upgrade">개조</button>
-            <button class="nav-btn" data-target="collection">도감</button>
-        </footer>
-
-        <!-- 팝업/모달 창 구역 -->
-        <div id="modal-container" class="hidden">
-            <div class="modal-content">
-                <button class="close-btn">&times;</button>
-                <div id="modal-body"></div>
+            <!-- 환경 정보 -->
+            <div id="region-info">
+                <span id="region-name">평온한 캠프</span>
+                <div id="travel-progress" class="hidden">
+                    <div id="progress-bar-fill"></div>
+                </div>
             </div>
+
+            <!-- 수동 탐사 버튼 -->
+            <div id="scavenge-container">
+                <button id="scavenge-btn" onclick="window.game.handleScavenge()">🔦 정찰 (⚡5)</button>
+            </div>
+        </div>
+
+        <!-- 하단 네비게이션 -->
+        <nav id="bottom-nav">
+            <div class="nav-item" onclick="window.game.openRegionMenu()">🚜</div>
+            <div class="nav-item" onclick="window.game.openGachaMenu()">🤖</div>
+            <div class="nav-item" onclick="window.game.openCookingMenu()">🍳</div>
+            <div class="nav-item" onclick="window.game.openUpgradeMenu()">🔧</div>
+            <div class="nav-item" onclick="window.game.openCollectionMenu()">📜</div>
+        </nav>
+    </div>
+
+    <!-- 모달 시스템 -->
+    <div id="modal-container" class="hidden">
+        <div id="modal-content">
+            <span id="close-modal" onclick="window.game.closeModal()">&times;</span>
+            <div id="modal-body"></div>
         </div>
     </div>
 
+    <!-- 스크립트 로드 순서 (의존성 고려) -->
     <script src="js/dataManager.js"></script>
     <script src="js/regions.js"></script>
-    <script src="js/cooking.js"></script>
     <script src="js/companions.js"></script>
     <script src="js/farmingEngine.js"></script>
     <script src="js/gachaManager.js"></script>

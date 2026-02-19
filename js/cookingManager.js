@@ -1,114 +1,122 @@
 /**
- * 노마드 베이스 - 무한 요리 매니저
- * 어떤 조합이든 요리로 만들어내며, 발견되지 않은 조합도 이름을 자동 생성합니다.
+ * 노마드 베이스 - 요리 매니저 2.0
  */
-// import { INGREDIENTS, SPECIAL_RECIPES, COOKING_METHODS } from './cooking.js';
-// import { dataManager } from './dataManager.js';
 
 class CookingManager {
-    /** 요리 시도: 정해진 레시피 검색 -> 없으면 절차적 생성 */
-    cook(ingredientIds) {
-        if (!ingredientIds || ingredientIds.length === 0) return null;
+    constructor() {
+        this.selectedIngredients = [];
+    }
 
+    /** 요리하기 */
+    cook(ingredientIds) {
         const state = dataManager.state;
 
         // 재료 소모 체크
         for (const id of ingredientIds) {
-            if (!state.ingredients[id] || state.ingredients[id] <= 0) {
+            if (!state.inventory.ingredients[id] || state.inventory.ingredients[id] <= 0) {
                 return { success: false, message: "재료가 부족합니다!" };
             }
         }
 
         // 재료 실제 소모
         ingredientIds.forEach(id => {
-            state.ingredients[id] -= 1;
+            state.inventory.ingredients[id] -= 1;
         });
 
-        // 1. 특별 레시피 확인
-        const special = SPECIAL_RECIPES.find(r =>
+        const recipeMatch = SPECIAL_RECIPES.find(r =>
             r.ingredients.length === ingredientIds.length &&
             r.ingredients.every(id => ingredientIds.includes(id))
         );
 
-        if (special) {
-            this.addToCollection(special.id, special.name);
-            return { ...special, success: true, isSpecial: true };
+        let result;
+        if (recipeMatch) {
+            result = recipeMatch;
+            // 도감 해금
+            if (!state.discovered.recipes.includes(result.id)) {
+                state.discovered.recipes.push(result.id);
+            }
+        } else {
+            // 특별 레시피가 아니면 일반 '죽' 생성
+            result = {
+                id: 'porridge',
+                name: '황무지 죽',
+                icon: '🥣',
+                recovery: 20,
+                desc: '맛은 없지만 생존을 위해 먹습니다.'
+            };
         }
 
-        // 2. 절차적 요리 생성
-        const result = this.generateProceduralDish(ingredientIds);
-        this.addToCollection(result.id, result.name);
-        return { ...result, success: true };
+        // 인벤토리에 보관
+        if (!state.inventory.food[result.id]) state.inventory.food[result.id] = 0;
+        state.inventory.food[result.id]++;
+
+        dataManager.save();
+        return { success: true, dish: result };
     }
 
-    /** 재료 정보를 기반으로 이름과 효과를 자동 생성 */
-    generateProceduralDish(ids) {
-        const items = ids.map(id => INGREDIENTS[id]).filter(x => x);
-        if (items.length === 0) return null;
-
-        // 이름 결정 로직
-        const adj = items[0].adj || "이상한";
-        const main = items[items.length - 1].name;
-
-        // 조리법 결정 (마지막 재료의 타입에 따라)
-        const method = COOKING_METHODS.find(m => m.type === items[items.length - 1].type) || COOKING_METHODS[0];
-
-        const dishName = `${adj} ${main} ${method.suffix}`;
-        const dishIcon = items[items.length - 1].icon;
-
-        // 파워 계산
-        const totalPower = items.reduce((sum, item) => sum + (item.power || 5), 0);
-
-        // 고유 ID 생성 (조합 기반)
-        const dishId = "gen_" + ids.sort().join("_");
-
-        return {
-            id: dishId,
-            name: dishName,
-            icon: dishIcon,
-            desc: `${items.map(i => i.name).join(", ")}을(를) 섞어 만든 요리입니다.`,
-            effect: `에너지 회복 +${totalPower}`,
-            power: totalPower,
-            isSpecial: false
-        };
-    }
-
-    /** 도감 등록 */
-    addToCollection(id, name) {
+    /** 요리 섭취 (에너지 회복) */
+    eat(foodId) {
         const state = dataManager.state;
-        if (!state.discovered.recipes.includes(id)) {
-            state.discovered.recipes.push(id);
-            if (!state.discovered.customNames) state.discovered.customNames = {};
-            state.discovered.customNames[id] = name;
-            dataManager.save();
-        }
+        if (!state.inventory.food[foodId] || state.inventory.food[foodId] <= 0) return { success: false };
+
+        const recipe = SPECIAL_RECIPES.find(r => r.id === foodId) || { id: 'porridge', recovery: 20 };
+        const recoveryAmount = recipe.recovery || 30;
+
+        state.inventory.food[foodId]--;
+        if (state.inventory.food[foodId] === 0) delete state.inventory.food[foodId];
+
+        state.resources.energy = Math.min(100, state.resources.energy + recoveryAmount);
+        dataManager.save();
+
+        return { success: true, amount: recoveryAmount };
     }
 
-    /** 도감 목록 반환 (특별 레시피 + 유저가 발견한 절차적 요리) */
-    getFullCollection() {
+    openCookingMenu() {
         const state = dataManager.state;
-        const collection = SPECIAL_RECIPES.map(r => ({
-            ...r,
-            isDiscovered: state.discovered.recipes.includes(r.id),
-            isSpecial: true
-        }));
+        this.selectedIngredients = [];
 
-        // 유저가 발견한 절차적 요리들 추가
-        state.discovered.recipes.forEach(id => {
-            if (id.startsWith('gen_')) {
-                collection.push({
-                    id: id,
-                    name: state.discovered.customNames[id] || "알 수 없는 요리",
-                    icon: "🍲",
-                    isDiscovered: true,
-                    isSpecial: false
-                });
+        const grid = document.createElement('div');
+        grid.className = 'inventory-grid';
+
+        let hasIngredients = false;
+        Object.keys(state.inventory.ingredients).forEach(id => {
+            const count = state.inventory.ingredients[id];
+            if (count > 0) {
+                hasIngredients = true;
+                const div = document.createElement('div');
+                div.className = 'inventory-slot';
+                div.innerHTML = `<div>${INGREDIENTS[id].icon}</div><div class="slot-count">${count}</div>`;
+                div.onclick = () => {
+                    if (this.selectedIngredients.includes(id)) {
+                        this.selectedIngredients = this.selectedIngredients.filter(x => x !== id);
+                        div.style.borderColor = '';
+                    } else if (this.selectedIngredients.length < 2) {
+                        this.selectedIngredients.push(id);
+                        div.style.borderColor = 'var(--accent-color)';
+                    }
+                    document.getElementById('cook-slots').textContent = this.selectedIngredients.map(i => INGREDIENTS[i].icon).join(' ') || '??';
+                };
+                grid.appendChild(div);
             }
         });
 
-        return collection;
+        document.getElementById('modal-body').innerHTML = `
+            <div style="padding:15px;">
+                <h2 style="margin-bottom:10px;">🍳 황무지 주방</h2>
+                <div class="collection-hint">재료 1~2개를 조합하세요. 제작한 요리는 '도감'에서 섭취 가능합니다.</div>
+                
+                <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:12px; margin:15px 0; text-align:center;">
+                    <div id="cook-slots" style="font-size:3rem; margin-bottom:15px; letter-spacing:10px;">??</div>
+                    <button class="upgrade-btn" onclick="window.game.handleCook()" style="width:120px;">요리 시작</button>
+                </div>
+
+                <h3 style="margin-bottom:10px;">📦 보유한 식재료</h3>
+                ${hasIngredients ? '' : '<p style="color:#666;">식재료가 없습니다. 탐사에서 구해보세요!</p>'}
+            </div>
+        `;
+        document.querySelector('#modal-body > div').appendChild(grid);
+        document.getElementById('modal-container').classList.remove('hidden');
     }
 }
 
-// export const cookingManager = new CookingManager();
 window.cookingManager = new CookingManager();

@@ -1,57 +1,74 @@
 /**
- * 노마드 베이스 - 가챠 시스템
- * 확률에 기반하여 동료를 선발하고 화려한 효과를 연출합니다.
+ * 노마드 베이스 - 가챠 시스템 2.0
  */
-// import { COMPANION_POOL } from './companions.js';
-// import { dataManager } from './dataManager.js';
 
 class GachaManager {
     constructor() {
+        this.BASE_PRICE = 50;
+        this.INC_PRICE = 10;
         this.PROBABILITIES = {
             'Super Rare': 0.05,
-            'Rare': 0.25,
-            'Common': 0.70
+            'Rare': 0.20,
+            'Common': 0.45,
+            'Fail': 0.30 // 30% 확률로 꽝(고물 더미)
         };
     }
 
-    /** 단일 가챠 실행 */
-    roll() {
-        const rand = Math.random();
-        let selectedRarity = 'Common';
-
-        if (rand < this.PROBABILITIES['Super Rare']) {
-            selectedRarity = 'Super Rare';
-        } else if (rand < this.PROBABILITIES['Super Rare'] + this.PROBABILITIES['Rare']) {
-            selectedRarity = 'Rare';
-        }
-
-        const pool = COMPANION_POOL.filter(c => c.rarity === selectedRarity);
-        const result = pool[Math.floor(Math.random() * pool.length)];
-
-        // 데이터 저장
-        this.saveCompanion(result);
-
-        return result;
+    /** 현재 가챠 가격 계산 */
+    getCurrentPrice() {
+        const count = dataManager.state.stats.gachaCount || 0;
+        return this.BASE_PRICE + (count * this.INC_PRICE);
     }
 
-    /** 획득한 동료 저장 */
+    /** 가챠 실행 */
+    roll() {
+        const state = dataManager.state;
+        const price = this.getCurrentPrice();
+
+        if (state.resources.scrap < price) {
+            return { success: false, message: `고철이 부족합니다! (${price}S 필요)` };
+        }
+
+        state.resources.scrap -= price;
+        state.stats.gachaCount++;
+
+        const rand = Math.random();
+        let result = null;
+
+        if (rand < this.PROBABILITIES['Super Rare']) {
+            result = this.pickFromPool('Super Rare');
+        } else if (rand < this.PROBABILITIES['Super Rare'] + this.PROBABILITIES['Rare']) {
+            result = this.pickFromPool('Rare');
+        } else if (rand < this.PROBABILITIES['Super Rare'] + this.PROBABILITIES['Rare'] + this.PROBABILITIES['Common']) {
+            result = this.pickFromPool('Common');
+        } else {
+            // 꽝 처리 (고물 부품 하나 지급)
+            itemManager.addItem('part_1', 1, 'items');
+            dataManager.save();
+            return { success: true, isFail: true, message: "고물 더미만 발견했습니다... (부품 +1)" };
+        }
+
+        this.saveCompanion(result);
+        return { success: true, isFail: false, companion: result };
+    }
+
+    pickFromPool(rarity) {
+        const pool = COMPANION_POOL.filter(c => c.rarity === rarity);
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+
     saveCompanion(companion) {
         const state = dataManager.state;
-        // 이미 소유했으면 레벨업이나 보상으로 대체 가능 (여기선 중복 허용 또는 목록 추가)
         state.companions.push({
             ...companion,
             obtainDate: Date.now()
         });
-
-        // 투입 가능 동료가 없었으면 자동으로 첫 동료 투입
         if (state.activeCompanions.length < 3) {
             state.activeCompanions.push(companion.id);
         }
-
         dataManager.save();
     }
 
-    /** 가챠 연출 배경 생성 (CSS 클래스 반환) */
     getRarityEffectClass(rarity) {
         switch (rarity) {
             case 'Super Rare': return 'gacha-effect-sr';
@@ -61,5 +78,4 @@ class GachaManager {
     }
 }
 
-// export const gachaManager = new GachaManager();
 window.gachaManager = new GachaManager();
