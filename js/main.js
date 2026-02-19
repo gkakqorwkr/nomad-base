@@ -323,12 +323,14 @@ class Game {
     }
 
     handleTravelStatus(status) {
-        if (status.status === 'arrived') {
-            this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
-        } else if (status.status === 'event_triggered') {
-            this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
-        }
+    if (status.status === 'arrived') {
+        this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
+        this.updateUI(); // [추가] 도착 직후 UI 즉시 갱신 (게이지 숨기기용)
+    } else if (status.status === 'event_triggered') {
+        // [수정] 나중에 여기서 이벤트 모달을 띄우는 함수를 실행하면 됩니다.
+        this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
     }
+}
 
     renderCompanionList() {
         const companions = this.dataManager.state.companions;
@@ -370,4 +372,5 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
