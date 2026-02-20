@@ -154,12 +154,32 @@ class Game {
     }
 
     /** 도감/인벤토리 메뉴 */
+    /** 도감/인벤토리 메뉴 */
     openCollectionMenu() {
         const state = this.dataManager.state;
         const foodInv = state.inventory.food || {};
         const relicInv = state.inventory.relics || [];
         const itemInv = state.inventory.items || {};
 
+        // 1. 요리 레시피 섹션 (추가된 부분)
+        let recipeHtml = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:20px;">';
+        window.SPECIAL_RECIPES.forEach(recipe => {
+            const ingredientIcons = recipe.ingredients.map(ingId => {
+                const ing = window.INGREDIENTS[ingId];
+                return ing ? ing.icon : '❓';
+            }).join(' + ');
+            recipeHtml += `
+                <div style="background:rgba(255,255,255,0.05); padding:8px; border-radius:6px; border:1px solid #444;">
+                    <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                        <span>${recipe.icon}</span>
+                        <strong style="font-size:0.75rem;">${recipe.name}</strong>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--accent-color); text-align:center;">${ingredientIcons}</div>
+                </div>`;
+        });
+        recipeHtml += '</div>';
+
+        // 2. 식품 보관함 섹션
         let foodHtml = '<div class="inventory-grid">';
         Object.keys(foodInv).forEach(id => {
             const count = foodInv[id];
@@ -169,25 +189,24 @@ class Game {
                     <div>${recipe.icon}</div>
                     <div class="slot-count">${count}</div>
                     <div style="font-size:0.6rem; color:#aaa; margin-top:2px;">먹기</div>
-                </div>
-            `;
+                </div>`;
         });
         if (Object.keys(foodInv).length === 0) foodHtml = '<p style="color:#666; padding:10px;">저장된 요리가 없습니다.</p>';
         foodHtml += '</div>';
 
+        // 3. 유물 섹션
         let relicHtml = '<div class="inventory-grid">';
-        RELICS.forEach(r => {
+        window.RELICS.forEach(r => {
             const isOwned = relicInv.includes(r.id);
             relicHtml += `
                 <div class="inventory-slot ${isOwned ? '' : 'locked'}" style="opacity:${isOwned ? 1 : 0.2}">
                     <div>${isOwned ? r.icon : '❓'}</div>
                     <div style="font-size:0.55rem; width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin-top:5px;">${isOwned ? r.name : ''}</div>
-                </div>
-            `;
+                </div>`;
         });
         relicHtml += '</div>';
 
-        // 합성 재료
+        // 4. 합성 재료 섹션
         let itemsHtml = '<div class="inventory-grid" id="forge-selection">';
         Object.keys(itemInv).forEach(id => {
             const count = itemInv[id];
@@ -195,26 +214,29 @@ class Game {
                 <div class="inventory-slot" onclick="window.game.toggleForgeItem('${id}', this)">
                     <div>🔩</div>
                     <div class="slot-count">${count}</div>
-                </div>
-            `;
+                </div>`;
         });
         if (Object.keys(itemInv).length === 0) itemsHtml = '<p style="color:#666; padding:10px;">합성 재료가 없습니다.</p>';
         itemsHtml += '</div>';
 
+        // 5. 전체 레이아웃 합치기
         document.getElementById('modal-body').innerHTML = `
-            <div style="padding:15px;">
-                <h2>📜 생존 가방</h2>
+            <div style="padding:15px; max-height:80vh; overflow-y:auto;">
+                <h2 style="margin-bottom:15px;">📜 생존 도감</h2>
                 
-                <h3 style="margin:15px 0 10px;">🍞 식품 보관함 (클릭 시 섭취)</h3>
+                <h3 style="margin:0 0 10px; font-size:0.9rem; color:#aaa;">🍳 요리 레시피 (조합법)</h3>
+                ${recipeHtml}
+
+                <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">🍞 보유 중인 요리</h3>
                 ${foodHtml}
 
-                <h3 style="margin:20px 0 10px;">🗿 발견한 유물 (${state.inventory.relics.length}/30)</h3>
+                <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">🗿 발견한 유물 (${state.inventory.relics.length}/30)</h3>
                 ${relicHtml}
 
-                <h3 style="margin:20px 0 10px;">⚒️ 아이템 합성 (재료 3개 선택)</h3>
+                <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">⚒️ 아이템 합성</h3>
                 <div style="background:rgba(255,165,0,0.1); padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
                     <span id="forge-count">선택: 0/3</span>
-                    <button class="upgrade-btn" onclick="window.game.handleSynthesis()" style="font-size:0.7rem; padding:4px 10px;">합성 실행 (100S)</button>
+                    <button class="upgrade-btn" onclick="window.game.handleSynthesis()" style="font-size:0.7rem; padding:4px 10px;">합성 (100S)</button>
                 </div>
                 ${itemsHtml}
             </div>
@@ -222,7 +244,6 @@ class Game {
         this.forgeSelected = [];
         document.getElementById('modal-container').classList.remove('hidden');
     }
-
     handleEat(foodId) {
         const result = this.cookingManager.eat(foodId);
         if (result.success) {
@@ -372,5 +393,6 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
