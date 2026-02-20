@@ -316,9 +316,8 @@ class Game {
         } else {
             this.showToast("사용할 수 있는 아이템이 없습니다.", "error");
         }
-    }
+    }//
 
-    }
 
     /** 합성용 아이템 선택 */
     toggleForgeItem(id, el) {
@@ -472,6 +471,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
