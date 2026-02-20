@@ -70,36 +70,53 @@ class Game {
     }
 
     /** 수동 탐사 처리 (하이리스크 하이리턴 적용) */
-    handleScavenge() {
-        const state = this.dataManager.state;
-        // 1. 현재 ID에 맞는 지역 데이터 찾기
-        const region = window.REGIONS.find(r => r.id === state.currentRegionId);
+    /** 수동 탐사 처리 (하이리스크 하이리턴 + 식재료 드롭) */
+handleScavenge() {
+    const state = this.dataManager.state;
+    const region = window.REGIONS.find(r => r.id === state.currentRegionId);
 
-        if (state.resources.energy < 5) {
-            this.showToast("에너지가 부족합니다!", 'error');
-            return;
-        }
+    if (state.resources.energy < 5) {
+        this.showToast("에너지가 부족합니다!", 'error');
+        return;
+    }
 
-        // 에너지 소모
-        state.resources.energy -= 5;
+    state.resources.energy -= 5;
 
-        // 2. 패널티 계산: 위험도(danger) 확률로 에너지 추가 감소
-        let damage = 0;
-        if (Math.random() * 20 < region.danger) {
-            damage = region.danger * 2;
-            state.resources.energy = Math.max(0, state.resources.energy - damage);
-        }
+    // 1. 패널티 계산
+    let damage = 0;
+    if (Math.random() * 20 < region.danger) {
+        damage = region.danger * 2;
+        state.resources.energy = Math.max(0, state.resources.energy - damage);
+    }
 
-        // 3. 보상 계산: 기본 고철(5~15) * 지역 bonus
-        const baseScrap = Math.floor(Math.random() * 11) + 5;
-        const gainedScrap = Math.floor(baseScrap * region.bonus);
-        state.resources.scrap += gainedScrap;
+    // 2. 고철 보상 계산
+    const baseScrap = Math.floor(Math.random() * 11) + 5;
+    const gainedScrap = Math.floor(baseScrap * region.bonus);
+    state.resources.scrap += gainedScrap;
 
-        // 결과 알림
-        let msg = `🔩 고철 +${gainedScrap}`;
-        if (damage > 0) msg += ` (⚠️ 위험! 에너지 -${damage})`;
+    // 3. [추가] 식재료 보상 계산 (기존 farmingEngine의 역할을 대신함)
+    let dropMsg = "";
+    // 지역의 rareDropChance를 활용해 식재료 획득 (기본 30% + 지역 보너스)
+    if (Math.random() < (0.3 + region.rareDropChance)) {
+        const ingredientKeys = Object.keys(window.INGREDIENTS);
+        const randomKey = ingredientKeys[Math.floor(Math.random() * ingredientKeys.length)];
         
-        this.showToast(msg, damage > 0 ? 'warning' : 'info');
+        if (!state.inventory.ingredients[randomKey]) state.inventory.ingredients[randomKey] = 0;
+        state.inventory.ingredients[randomKey]++;
+        
+        const ing = window.INGREDIENTS[randomKey];
+        dropMsg = ` | ${ing.icon} ${ing.name} 발견!`;
+    }
+
+    // 결과 알림
+    let msg = `🔩 고철 +${gainedScrap}${dropMsg}`;
+    if (damage > 0) msg += ` (⚠️ 위험! 에너지 -${damage})`;
+    
+    this.showToast(msg, damage > 0 ? 'warning' : 'info');
+    
+    this.dataManager.save();
+    this.updateUI();
+}
         
         // 데이터 저장 및 UI 갱신
         this.dataManager.save();
@@ -371,10 +388,14 @@ class Game {
 
     handleTravelStatus(status) {
     if (status.status === 'arrived') {
+        // [중요] 실제로 목적지 ID를 현재 지역 ID로 덮어씌워야 합니다.
+        const state = this.dataManager.state;
+        state.currentRegionId = state.travel.targetRegionId; 
+        
         this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
-        this.updateUI(); // [추가] 도착 직후 UI 즉시 갱신 (게이지 숨기기용)
+        this.dataManager.save(); // 변경된 지역 저장
+        this.updateUI(); 
     } else if (status.status === 'event_triggered') {
-        // [수정] 나중에 여기서 이벤트 모달을 띄우는 함수를 실행하면 됩니다.
         this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
     }
 }
@@ -419,6 +440,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
