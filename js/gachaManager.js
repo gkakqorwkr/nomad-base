@@ -43,7 +43,7 @@ class GachaManager {
             result = this.pickFromPool('Common');
         } else {
             // 꽝 처리 (고물 부품 하나 지급)
-            itemManager.addItem('part_1', 1, 'items');
+            window.itemManager.addItem('trash', 1, 'items');
             dataManager.save();
             return { success: true, isFail: true, message: "고물 더미만 발견했습니다... (부품 +1)" };
         }

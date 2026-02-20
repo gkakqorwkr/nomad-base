@@ -395,7 +395,8 @@ class Game {
         const result = this.cookingManager.eat(foodId);
         if (result.success) {
             this.showToast(`에너지가 ${result.amount} 회복되었습니다!`);
-            this.openCollectionMenu(); // UI 갱신
+            this.openCollectionMenu(); // 인벤토리 갱신
+            this.updateUI(); // 상단 바 에너지 즉시 반영
         } else {
             this.showToast("사용할 수 있는 아이템이 없습니다.", "error");
         }

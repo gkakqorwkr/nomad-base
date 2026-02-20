@@ -43,10 +43,20 @@ window.VEHICLE_PARTS = {
     }
 };
 
+
+/** 🚜 차량 특수 모듈 데이터 (Phase 3) */
+window.VEHICLE_MODULES = {
+    greenhouse: { name: "자동 온실", icon: "🌱", desc: "이동 중 무작위 식재료를 수확합니다.", maxLevel: 5, cost: { scrap: 300 }, baseEffect: 0.05, bonusPerLevel: 0.05 },
+    sonar: { name: "고성능 소나", icon: "📡", desc: "미션 및 암시장 발견 확률이 증가합니다.", maxLevel: 5, cost: { scrap: 500 }, baseEffect: 1.1, bonusPerLevel: 0.2 },
+    fridge: { name: "특수 냉장고", icon: "🧊", desc: "요리 섭취 시 에너지 회복량이 증폭됩니다.", maxLevel: 5, cost: { scrap: 400 }, baseEffect: 1.1, bonusPerLevel: 0.2 }
+};
+
 class VehicleManager {
     /** 특정 부품 업그레이드 시도 */
     upgradePart(partKey) {
         const state = dataManager.state;
+        if (!state.vehicle.parts[partKey]) return { success: false, message: "부품 정보를 찾을 수 없습니다." };
+
         const currentLevel = state.vehicle.parts[partKey].level;
         const partData = VEHICLE_PARTS[partKey];
 
@@ -61,10 +71,54 @@ class VehicleManager {
             state.vehicle.parts[partKey].level += 1;
             state.vehicle.parts[partKey].name = nextLevelData.name;
             dataManager.save();
-            return { success: true, message: `${nextLevelData.name}(으)로 개조 완료! 능력치가 대폭 상승했습니다.` };
+            return { success: true, message: `${nextLevelData.name}(으)로 개조 완료!` };
         } else {
             return { success: false, message: `고철이 부족합니다! (${nextLevelData.cost}S 필요)` };
         }
+    }
+
+    /** 특수 모듈 업그레이드 (Phase 3) */
+    upgradeModule(id) {
+        const state = dataManager.state;
+        const m = window.VEHICLE_MODULES[id];
+        if (!m) return { success: false, message: "모듈 정보를 찾을 수 없습니다." };
+
+        const currentLevel = state.vehicle.modules[id] || 0;
+        if (currentLevel >= m.maxLevel) return { success: false, message: "이미 최대 레벨입니다!" };
+
+        const cost = m.cost.scrap;
+        if (state.resources.scrap >= cost) {
+            state.resources.scrap -= cost;
+            state.vehicle.modules[id] = currentLevel + 1;
+            dataManager.save();
+            return { success: true, message: `${m.name} 업그레이드 완료 (Lv.${currentLevel + 1})` };
+        } else {
+            return { success: false, message: `고철이 부족합니다! (${cost}S 필요)` };
+        }
+    }
+
+    /** 모듈 보너스 수치 계산 */
+    getModuleEffect(id) {
+        const state = dataManager.state;
+        const m = window.VEHICLE_MODULES[id];
+        if (!m) return 1;
+
+        const level = state.vehicle.modules[id] || 0;
+        if (level === 0) return (id === 'greenhouse' ? 0 : 1);
+
+        return m.baseEffect + ((level - 1) * m.bonusPerLevel);
+    }
+
+    /** 현재 특정 파츠의 보너스 수치 반환 */
+    getBonus(partKey) {
+        const level = dataManager.state.vehicle.parts[partKey].level;
+        const part = VEHICLE_PARTS[partKey];
+        return part.levels[level - 1].bonus;
+    }
+
+    /** 레벨 반환 유틸 */
+    getPartLevel(key) {
+        return dataManager.state.vehicle.parts[key].level;
     }
 
     /** 현재 차량 정보 요약 */
@@ -80,14 +134,6 @@ class VehicleManager {
             };
         });
     }
-
-    /** 현재 특정 파츠의 보너스 수치 반환 */
-    getBonus(partKey) {
-        const level = dataManager.state.vehicle.parts[partKey].level;
-        const part = VEHICLE_PARTS[partKey];
-        return part.levels[level - 1].bonus;
-    }
 }
 
-// export const vehicleManager = new VehicleManager();
 window.vehicleManager = new VehicleManager();
