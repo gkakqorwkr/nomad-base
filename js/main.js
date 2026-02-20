@@ -69,15 +69,41 @@ class Game {
         }
     }
 
-    /** 수동 탐사 처리 */
+    /** 수동 탐사 처리 (하이리스크 하이리턴 적용) */
     handleScavenge() {
-        const result = this.farmingEngine.scavenge();
-        if (result.success) {
-            this.showToast(result.message);
-            this.updateUI();
-        } else {
-            this.showToast(result.message, 'error');
+        const state = this.dataManager.state;
+        // 1. 현재 ID에 맞는 지역 데이터 찾기
+        const region = window.REGIONS.find(r => r.id === state.currentRegionId);
+
+        if (state.resources.energy < 5) {
+            this.showToast("에너지가 부족합니다!", 'error');
+            return;
         }
+
+        // 에너지 소모
+        state.resources.energy -= 5;
+
+        // 2. 패널티 계산: 위험도(danger) 확률로 에너지 추가 감소
+        let damage = 0;
+        if (Math.random() * 20 < region.danger) {
+            damage = region.danger * 2;
+            state.resources.energy = Math.max(0, state.resources.energy - damage);
+        }
+
+        // 3. 보상 계산: 기본 고철(5~15) * 지역 bonus
+        const baseScrap = Math.floor(Math.random() * 11) + 5;
+        const gainedScrap = Math.floor(baseScrap * region.bonus);
+        state.resources.scrap += gainedScrap;
+
+        // 결과 알림
+        let msg = `🔩 고철 +${gainedScrap}`;
+        if (damage > 0) msg += ` (⚠️ 위험! 에너지 -${damage})`;
+        
+        this.showToast(msg, damage > 0 ? 'warning' : 'info');
+        
+        // 데이터 저장 및 UI 갱신
+        this.dataManager.save();
+        this.updateUI();
     }
 
     /** 가챠 메뉴 열기 */
@@ -393,6 +419,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
