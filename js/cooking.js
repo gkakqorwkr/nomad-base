@@ -35,15 +35,17 @@ window.SPECIAL_RECIPES = [
     { id: "cook_1", name: "문어좀비 타코야끼", ingredients: ["zombie_octopus", "blue_oil"], icon: "🍡", desc: "고전적인 아포칼립스 별미." },
     { id: "cook_2", name: "발광 버섯 스프", ingredients: ["glow_mushroom", "water"], icon: "🥣", desc: "밤길을 밝혀주는 따뜻한 한 그릇." },
     { id: "cook_3", name: "방사능 토마토 파스타", ingredients: ["radioactive_tomato", "water"], icon: "🍝", desc: "톡 쏘는 맛이 일품입니다." },
-    { id: "cook_4", name: "지렁이 튀김", ingredients: ["dry_worm", "blue_oil"], icon: "🍟", desc: "바삭바삭한 단백질 덩어리." },
+    { id: "cook_4", name: "지렁이 튀김", ingredients: ["dry_worm", "blue_oil"], icon: "🍟", desc: "바삭바삭하다 바삭바삭한." },
     { id: "cook_5", name: "독침 찜", ingredients: ["poison_stinger", "rusty_salt"], icon: "🍲", desc: "둘이 먹다 하나가 죽...? 어억." },
-    { id: "cook_6", name: "거대 🔥알 오므라이스", ingredients: ["giant_egg", "sugar_cube"], icon: "🍛", desc: "와... 크네요. 든든한 한 끼." },
-    { id: "cook_7", name: "철갑 게 그릴", ingredients: ["armored_crab", "engine_grease"], icon: "🦀", desc: "고열로 구워낸 단단한 속살." },
+    { id: "cook_6", name: "거대 🔥알 오므라이스", ingredients: ["giant_egg", "sugar_cube"], icon: "🍛", desc: "그... 크네요. 든든한 한 끼." },
+    { id: "cook_7", name: "철갑 게 그릴", ingredients: ["armored_crab", "engine_grease"], icon: "🦀", desc: "고열로 굽다가 팬이 녹았어요." },
     { id: "cook_8", name: "식인 꽃 차", ingredients: ["ghost_flower", "water"], icon: "🍵", desc: "정신을 맑게(또는 아찔하게) 해줍니다." },
     { id: "cook_9", name: "형광으로 번쩍이는 샐러드", ingredients: ["glow_mushroom", "acid_lemon"], icon: "🥗", desc: "야광인간의 꿈에 가까워져요." },
     { id: "cook_10", name: "비명 나올 만큼 맛있는 나물 무침", ingredients: ["wild_herb", "honey_goo"], icon: "🥗", desc: "피로 해소에 즉효입니다." },
-    { id: "cook_11", name: "괴수 등갈비", ingredients: ["monster_meat", "rusty_salt"], icon: "🍖", desc: "이건 무슨 고기인가요?" },
-    { id: "cook_12", name: "레모네이드", ingredients: ["acid_lemon", "sugar_cube"], icon: "🍹", desc: "갈증을 날려버리는 상큼함." }
+    { id: "cook_11", name: "괴수 등갈비", ingredients: ["monster_meat", "rusty_salt"], icon: "🍖", desc: "이건 무슨 고기인가요? 동료가 보이지 않아요." },
+    { id: "cook_12", name: "레모네이드", ingredients: ["acid_lemon", "sugar_cube"], icon: "🍹", desc: "갈증을 날려버리는 상큼함." },
+    { id: "cook_13", name: "팝콘", ingredients: ["mutant_corn", "blue_oil"], icon: "🍿", desc: "옥수수가 커지다니. 이건 조작입니다!" },
+    { id: "cook_14", name: "두바이쫀득쿠키", ingredients: ["wild_herb", "sugar_cube"], icon: "🧆", desc: "이게 어떻게 만들어지는거죠? 아무튼 유행 음식." }
 ];
 
 /** 조리법 종류 */
@@ -55,5 +57,6 @@ window.COOKING_METHODS = [
     { name: "튀김", suffix: "튀김", type: "fluid" },
     { name: "샐러드", suffix: "샐러드", type: "veg" }
 ];
+
 
 
