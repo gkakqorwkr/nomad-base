@@ -58,20 +58,29 @@ class Game {
     
     updateUI() {
         const state = this.dataManager.state;
-        document.getElementById('scrap-value').textContent = Math.floor(state.resources.scrap);
-        document.getElementById('energy-value').textContent = Math.floor(state.resources.energy);
+        
+        // [수정] Number()를 사용하여 문자열 결합 방지 및 소수점 제거
+        const currentScrap = Math.floor(Number(state.resources.scrap) || 0);
+        const currentEnergy = Math.floor(Number(state.resources.energy) || 0);
+
+        document.getElementById('scrap-value').textContent = currentScrap.toLocaleString(); // 세자리 콤마 추가
+        document.getElementById('energy-value').textContent = currentEnergy;
         document.getElementById('region-name').textContent = this.travelManager.getCurrentRegion().name;
 
-        // 이동 프로그레스바
+        // 이동 프로그레스바 로직
         const progress = document.getElementById('travel-progress');
         const fill = document.getElementById('progress-bar-fill');
+        
         if (state.travel.isMoving) {
             progress.classList.remove('hidden');
             const total = state.travel.endTime - state.travel.startTime;
             const current = Date.now() - state.travel.startTime;
-            fill.style.width = Math.min(100, (current / total) * 100) + '%';
+            // 0으로 나누기 방지 및 범위 제한
+            const percent = total > 0 ? Math.min(100, (current / total) * 100) : 0;
+            fill.style.width = percent + '%';
         } else {
             progress.classList.add('hidden');
+            fill.style.width = '0%';
         }
     }
 
@@ -479,6 +488,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
