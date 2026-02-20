@@ -88,12 +88,18 @@ class TravelManager {
     }
 
     /** 도착 처리 */
-    completeTravel() {
-        const state = dataManager.state;
-        state.currentRegionId = state.travel.targetRegionId;
-        state.travel = { targetRegionId: null, startTime: null, endTime: null, isMoving: false };
-        dataManager.save();
-    }
+// TravelManager.js 내부의 update 메서드 혹은 도착 처리 부분
+completeTravel() {
+    const state = this.dataManager.state;
+    // 실제로 데이터 매니저의 상태를 목적지 ID로 변경
+    state.currentRegionId = state.travel.targetRegionId; 
+    state.travel.isMoving = false;
+    state.travel.startTime = 0;
+    state.travel.endTime = 0;
+    
+    this.dataManager.save(); // 변경된 지역 저장
+    return { status: 'arrived' };
+}
 
     /** 현재 위치 데이터 */
     getCurrentRegion() {
@@ -103,3 +109,4 @@ class TravelManager {
 
 // export const travelManager = new TravelManager();
 window.travelManager = new TravelManager();
+
