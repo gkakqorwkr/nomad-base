@@ -5,6 +5,7 @@
 
 class TravelManager {
     /** 이동 시작 */
+   /** 이동 시작 */
     startTravel(regionId) {
         const state = dataManager.state;
         const targetRegion = REGIONS.find(r => r.id === regionId);
@@ -13,14 +14,24 @@ class TravelManager {
         if (state.currentRegionId === regionId) return { success: false, message: "이미 그곳에 있습니다." };
         if (state.travel.isMoving) return { success: false, message: "이미 이동 중입니다." };
 
+        // [추가] 이동 시 최소 에너지 검사 (예: 10 필요)
+        const travelEnergyCost = 10; 
+        if (state.resources.energy < travelEnergyCost) {
+            return { success: false, message: `이동을 위한 에너지(${travelEnergyCost})가 부족합니다.` };
+        }
+
         // 해금 비용 확인
         if (state.resources.scrap < (targetRegion.unlockCost || 0)) {
             return { success: false, message: `해금 비용 ${targetRegion.unlockCost} 고철이 부족합니다.` };
         }
 
-        // 엔진 레벨에 따른 이동 시간 단축 보너스 적용
+        // 비용 차감
+        state.resources.scrap -= (targetRegion.unlockCost || 0);
+        state.resources.energy -= travelEnergyCost; // [추가] 에너지 차감
+
+        // 엔진 보너스 계산
         const bonus = window.vehicleManager ? vehicleManager.getBonus('engine') * 0.01 : 1.0;
-        const actualTime = targetRegion.travelTime * bonus;
+        const actualTime = targetRegion.travelTime * (1 - bonus); // 단축이므로 (1 - 보너스)
 
         const now = Date.now();
         state.travel = {
@@ -128,3 +139,4 @@ class TravelManager {
 
 // 전역 할당
 window.travelManager = new TravelManager();
+
