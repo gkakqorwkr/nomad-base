@@ -110,7 +110,7 @@ class Game {
 
         // 3. [추가] 식재료 보상 계산 (기존 farmingEngine의 역할을 대신함)
         let dropMsg = "";
-        if (Math.random() < (0.3 + region.rareDropChance)) {
+        if (Math.random() < (0.6 + region.rareDropChance)) {
             const ingredientKeys = Object.keys(window.INGREDIENTS);
             const randomKey = ingredientKeys[Math.floor(Math.random() * ingredientKeys.length)];
             
@@ -305,7 +305,7 @@ class Game {
     /** [추가] 요리 상세 정보 표시 기능 */
     showFoodDetail(id) {
         const foodData = this.dataManager.state.inventory.food[id];
-        const recipe = window.SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽', desc: '평범한 음식입니다.' };
+        const recipe = window.SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽', desc: '으... 이걸 먹어야 한다고요?' };
         const detailView = document.getElementById('food-detail-view');
 
         const count = (typeof foodData === 'object') ? foodData.count : foodData;
@@ -492,6 +492,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
