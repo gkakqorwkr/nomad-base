@@ -117,9 +117,6 @@ class Game {
     }
         
         // 데이터 저장 및 UI 갱신
-        this.dataManager.save();
-        this.updateUI();
-    }
 
     /** 가챠 메뉴 열기 */
     openGachaMenu() {
@@ -444,6 +441,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
