@@ -17,16 +17,16 @@ window.COMPANION_POOL = [
     { id: 'r5', name: '천재 해커 베티', type: 'human', rarity: 'Rare', bonus: 1.4, role: 'Engineer', desc: '고장 난 기계를 말로 설득해서 고칩니다.', color: '#00f2ff' },
 
     // --- Common (70%) ---
-    { id: 'c1', name: '시골 누렁이', type: 'animal', rarity: 'Common', bonus: 1.1, desc: '꼬리를 흔들며 사기를 북돋아 줍니다.', color: '#ffffff' },
-    { id: 'c2', name: '고철 수집가 잭', type: 'human', rarity: 'Common', bonus: 1.2, desc: '쓰레기 더미에서 보물을 찾는 달인입니다.', color: '#ffffff' },
-    { id: 'c3', name: '버려진 프로토타입 봇', type: 'humanoid', rarity: 'Common', bonus: 1.1, desc: '자꾸 "치킨 먹고 싶다"는 로그를 출력합니다.', color: '#ffffff' },
-    { id: 'c4', name: '길거리 고양이', type: 'animal', rarity: 'Common', bonus: 1.1, desc: '쥐(또는 좀비 쥐)를 잘 잡습니다.', color: '#ffffff' },
-    { id: 'c5', name: '전직 배달원 킴', type: 'human', rarity: 'Common', bonus: 1.2, desc: '어떤 험지도 빠르게 돌파하는 운전병입니다.', color: '#ffffff' },
-    { id: 'c6', name: '숲의 여우', type: 'animal', rarity: 'Common', bonus: 1.1, desc: '영리하게 필요한 식재료를 물어옵니다.', color: '#ffffff' },
-    { id: 'c7', name: '은퇴한 농부 할아버지', type: 'human', rarity: 'Common', bonus: 1.3, desc: '방사능 토양에서도 싹을 틔웁니다.', color: '#ffffff' },
-    { id: 'c8', name: '방어구 전문 대장장이', type: 'human', rarity: 'Common', bonus: 1.2, desc: '냄비 뚜껑으로도 방패를 만듭니다.', color: '#ffffff' },
-    { id: 'c9', name: '까칠한 라쿤', type: 'animal', rarity: 'Common', bonus: 1.1, desc: '남의 가방을 뒤지는 속도가 일품입니다.', color: '#ffffff' },
-    { id: 'c10', name: '명상 중인 생존자', type: 'human', rarity: 'Common', bonus: 1.1, desc: '가만히 있어도 정신력을 회복시켜 줍니다.', color: '#ffffff' },
-    { id: 'c11', name: '강인한 말', type: 'animal', rarity: 'Common', bonus: 1.3, desc: '기지를 끄는 데 큰 도움이 됩니다.', color: '#ffffff' },
-    { id: 'c12', name: '무전기 수리공', type: 'human', rarity: 'Common', bonus: 1.2, desc: '잡음 섞인 신호에서 정보를 읽어냅니다.', color: '#ffffff' }
+    { id: 'c1', name: '시골 누렁이', type: 'animal', rarity: 'Common', bonus: 1.1, role: 'Scout', desc: '꼬리를 흔들며 사기를 북돋아 줍니다.', color: '#ffffff' },
+    { id: 'c2', name: '고철 수집가 잭', type: 'human', rarity: 'Common', bonus: 1.2, role: 'Researcher', desc: '쓰레기 더미에서 보물을 찾는 달인입니다.', color: '#ffffff' },
+    { id: 'c3', name: '버려진 프로토타입 봇', type: 'humanoid', rarity: 'Common', bonus: 1.1, role: 'Engineer', desc: '자꾸 "치킨 먹고 싶다"는 로그를 출력합니다.', color: '#ffffff' },
+    { id: 'c4', name: '길거리 고양이', type: 'animal', rarity: 'Common', bonus: 1.1, role: 'Scout', desc: '쥐(또는 좀비 쥐)를 잘 잡습니다.', color: '#ffffff' },
+    { id: 'c5', name: '전직 배달원 킴', type: 'human', rarity: 'Common', bonus: 1.2, role: 'Scout', desc: '어떤 험지도 빠르게 돌파하는 운전병입니다.', color: '#ffffff' },
+    { id: 'c6', name: '숲의 여우', type: 'animal', rarity: 'Common', bonus: 1.1, role: 'Researcher', desc: '영리하게 필요한 식재료를 물어옵니다.', color: '#ffffff' },
+    { id: 'c7', name: '은퇴한 농부 할아버지', type: 'human', rarity: 'Common', bonus: 1.3, role: 'Chef', desc: '방사능 토양에서도 싹을 틔웁니다.', color: '#ffffff' },
+    { id: 'c8', name: '방어구 전문 대장장이', type: 'human', rarity: 'Common', bonus: 1.2, role: 'Engineer', desc: '냄비 뚜껑으로도 방패를 만듭니다.', color: '#ffffff' },
+    { id: 'c9', name: '까칠한 라쿤', type: 'animal', rarity: 'Common', bonus: 1.1, role: 'Researcher', desc: '남의 가방을 뒤지는 속도가 일품입니다.', color: '#ffffff' },
+    { id: 'c10', name: '명상 중인 생존자', type: 'human', rarity: 'Common', bonus: 1.1, role: 'Chef', desc: '가만히 있어도 정신력을 회복시켜 줍니다.', color: '#ffffff' },
+    { id: 'c11', name: '강인한 말', type: 'animal', rarity: 'Common', bonus: 1.3, role: 'Soldier', desc: '기지를 끄는 데 큰 도움이 됩니다.', color: '#ffffff' },
+    { id: 'c12', name: '무전기 수리공', type: 'human', rarity: 'Common', bonus: 1.2, role: 'Engineer', desc: '잡음 섞인 신호에서 정보를 읽어냅니다.', color: '#ffffff' }
 ];

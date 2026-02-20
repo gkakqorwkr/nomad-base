@@ -125,10 +125,13 @@ class Game {
             state.resources.energy = Math.max(0, state.resources.energy - damage);
         }
 
-        // 2. 고철 보상 계산
+        // 2. 고철 보상 계산 (Researcher 시너지 반영)
+        const synergy = this.getSynergyBonus();
         const baseScrap = Math.floor(Math.random() * 11) + 5;
-        const gainedScrap = Math.floor(baseScrap * region.bonus * weather.dropMult);
+        const gainedScrap = Math.floor(baseScrap * region.bonus * weather.dropMult * (1 + synergy.scrapBonus));
         state.resources.scrap += gainedScrap;
+
+        window.logger.log(`탐사 수행: 고철 +${gainedScrap} 획득 (시너지 보너스: ${Math.round(synergy.scrapBonus * 100)}%)`);
 
         // 3. [추가] 식재료 보상 계산
         let dropMsg = "";
