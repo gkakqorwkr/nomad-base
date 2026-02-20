@@ -48,6 +48,29 @@ body {
     z-index: 10;
     backdrop-filter: blur(5px);
     border-bottom: 1px solid #333;
+    position: relative;
+}
+
+#reset-game {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    opacity: 0.5;
+    transition: opacity 0.2s, transform 0.2s;
+    padding: 5px;
+    z-index: 20;
+}
+
+#reset-game:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.2);
+}
+
+#reset-game:active {
+    transform: translateY(-50%) scale(0.9);
 }
 
 /* 메인 뷰 */
