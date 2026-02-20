@@ -147,22 +147,24 @@ class CookingManager {
             }
         });
 
-        document.getElementById('modal-body').innerHTML = `
-            <div style="padding:15px;">
-                <h2 style="margin-bottom:10px;">🍳 황무지 주방</h2>
-                <div class="collection-hint">재료 1~2개를 조합하세요. 제작한 요리는 '도감'에서 섭취 가능합니다.</div>
-                
-                <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:12px; margin:15px 0; text-align:center;">
-                    <div id="cook-slots" style="font-size:3rem; margin-bottom:15px; letter-spacing:10px;">??</div>
-                    <button class="upgrade-btn" onclick="window.game.handleCook()" style="width:120px;">요리 시작</button>
-                </div>
+        if (window.game && window.game.showModal) {
+            window.game.showModal("🍳 황무지 주방", `
+                <div style="padding:5px;">
+                    <div class="collection-hint">재료 1~2개를 조합하세요. 제작한 요리는 '도감'에서 섭취 가능합니다.</div>
+                    
+                    <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:12px; margin:15px 0; text-align:center;">
+                        <div id="cook-slots" style="font-size:3rem; margin-bottom:15px; letter-spacing:10px;">??</div>
+                        <button class="upgrade-btn" onclick="window.game.handleCook()" style="width:120px;">요리 시작</button>
+                    </div>
 
-                <h3 style="margin-bottom:10px;">📦 보유한 식재료</h3>
-                ${hasIngredients ? '' : '<p style="color:#666;">식재료가 없습니다. 탐사에서 구해보세요!</p>'}
-            </div>
-        `;
-        document.querySelector('#modal-body > div').appendChild(grid);
-        document.getElementById('modal-container').classList.remove('hidden');
+                    <h3 style="margin-bottom:10px;">📦 보유한 식재료</h3>
+                    ${hasIngredients ? '' : '<p style="color:#666;">식재료가 없습니다. 탐사에서 구해보세요!</p>'}
+                    <div id="cooking-grid-container"></div>
+                </div>
+            `);
+            const container = document.getElementById('cooking-grid-container');
+            if (container) container.appendChild(grid);
+        }
     }
 }
 

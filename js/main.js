@@ -199,9 +199,8 @@ class Game {
         const price = this.gachaManager.getCurrentPrice();
         const count = this.dataManager.state.stats.gachaCount;
 
-        document.getElementById('modal-body').innerHTML = `
-            <div style="padding:20px; text-align:center;">
-                <h2>🤖 대원 본부 (HQ)</h2>
+        const html = `
+            <div style="padding:10px; text-align:center;">
                 <p style="color:#aaa; margin:10px 0;">황무지의 유능한 생존자들을 포섭하세요.</p>
                 
                 <div style="background:rgba(0,0,0,0.3); padding:20px; border-radius:12px; margin:20px 0;">
@@ -217,8 +216,8 @@ class Game {
                 </div>
             </div>
         `;
+        this.showModal("🤖 대원 본부 (HQ)", html);
         this.renderCompanionList();
-        document.getElementById('modal-container').classList.remove('hidden');
     }
 
     handleGacha() {
@@ -341,32 +340,28 @@ class Game {
         if (Object.keys(itemInv).length === 0) itemsHtml = '<p style="color:#666; padding:10px;">합성 재료가 없습니다.</p>';
         itemsHtml += '</div>';
 
-        // 5. 전체 레이아웃 (상세 설명 팝업 공간 추가)
-        document.getElementById('modal-body').innerHTML = `
-            <div style="padding:15px; max-height:80vh; overflow-y:auto;">
-                <h2 style="margin-bottom:15px;">📜 생존 도감</h2>
-                
-                <h3 style="margin:0 0 10px; font-size:0.9rem; color:#aaa;">🍳 요리 레시피 (조합법)</h3>
+        // UI 일관성을 위해 showModal 사용
+        this.showModal("📜 생존 기록 및 도감", `
+            <div style="padding:10px; max-height:80vh; overflow-y:auto;">
+                <h4 style="margin-bottom:10px;">🍲 특별 레시피 (해금: ${state.discovered.recipes.length}/${window.SPECIAL_RECIPES.length})</h4>
                 ${recipeHtml}
-
-                <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">🍞 보유 중인 요리</h3>
+                
+                <h4 style="margin-bottom:10px;">📦 식품 보관함</h4>
                 ${foodHtml}
+                <div id="food-detail-view" class="hidden" style="margin-top:20px; padding:15px; background:rgba(255,165,0,0.1); border-radius:10px; border:1px solid var(--accent-color); text-align:center;"></div>
 
-                <div id="food-detail-view" class="hidden" style="margin-top:15px; padding:15px; border:1px solid var(--accent-color); border-radius:10px; background:rgba(255,165,0,0.1); text-align:center;"></div>
-
-                <h3 style="margin:30px 0 10px; font-size:0.9rem; color:#aaa;">🗿 발견한 유물 (${state.inventory.relics.length}/30)</h3>
+                <h4 style="margin:20px 0 10px 0;">💎 유물 도감 (${relicInv.length}/${window.RELICS.length})</h4>
                 ${relicHtml}
 
-                <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">⚒️ 아이템 합성</h3>
+                <h4 style="margin:20px 0 10px 0;">🔩 정비용 고물</h4>
                 <div style="background:rgba(255,165,0,0.1); padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.8rem; display:flex; justify-content:space-between; align-items:center;">
                     <span id="forge-count">선택: 0/3</span>
                     <button class="upgrade-btn" onclick="window.game.handleSynthesis()" style="font-size:0.7rem; padding:4px 10px;">합성 (100S)</button>
                 </div>
                 ${itemsHtml}
             </div>
-        `;
+        `);
         this.forgeSelected = [];
-        document.getElementById('modal-container').classList.remove('hidden');
     }
 
     /** [추가] 요리 상세 정보 표시 기능 */
@@ -444,8 +439,7 @@ class Game {
                 </div>
             `;
         });
-        document.getElementById('modal-body').innerHTML = `<div style="padding:20px;"><h2>🗺️ 지역 이동</h2>${list}</div>`;
-        document.getElementById('modal-container').classList.remove('hidden');
+        this.showModal("🗺️ 지역 이동", `<div style="padding:5px;">${list}</div>`);
     }
 
     handleTravel(id) {
@@ -571,16 +565,15 @@ class Game {
             optionsHtml += `<button class="upgrade-btn" style="margin: 5px; width: 100%;" onclick="window.game.handleEventOption(${JSON.stringify(opt).replace(/"/g, '&quot;')})">${opt.text}</button>`;
         });
 
-        document.getElementById('modal-body').innerHTML = `
-            <div style="padding:20px; text-align:center;">
-                <h2 style="color:var(--accent-color);">⚠️ 돌발 상황: ${event.name}</h2>
+        const html = `
+            <div style="padding:10px; text-align:center;">
                 <p style="margin:20px 0; line-height:1.6;">${event.desc}</p>
                 <div style="display:flex; flex-direction:column; align-items:center;">
                     ${optionsHtml}
                 </div>
             </div>
         `;
-        document.getElementById('modal-container').classList.remove('hidden');
+        this.showModal(`⚠️ 돌발 상황: ${event.name}`, html);
     }
 
     handleEventOption(option) {
@@ -659,7 +652,7 @@ class Game {
     /** 동료 목록 렌더링 (시너지 정보 포함 - Phase 5) */
     renderCompanionList() {
         const state = this.dataManager.state;
-        const companions = state.discovered.companions || [];
+        const companions = state.companions || [];
         const container = document.getElementById('companion-list');
         if (!container) return;
 
@@ -678,8 +671,10 @@ class Game {
         synergyHtml += '</div>';
 
         let listHtml = synergyHtml + '<div style="display:grid; grid-template-columns:1fr; gap:8px;">';
-        companions.forEach(id => {
-            const comp = window.COMPANION_POOL.find(c => c.id === id);
+        companions.forEach(c => {
+            // ID 또는 객체 형태 모두 대응
+            const compId = typeof c === 'string' ? c : c.id;
+            const comp = window.COMPANION_POOL.find(p => p.id === compId);
             if (!comp) return;
             listHtml += `
                 <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
@@ -689,6 +684,7 @@ class Game {
                     </div>
                 </div>`;
         });
+        if (companions.length === 0) listHtml += '<p style="color:#666; font-size:0.8rem; text-align:center;">아직 합류한 대원이 없습니다.</p>';
         listHtml += '</div>';
         container.innerHTML = listHtml;
     }
@@ -696,10 +692,11 @@ class Game {
     /** 📊 시너지 보너스 수치 계산 (System 2.0) */
     getSynergyBonus() {
         const state = this.dataManager.state;
-        const companions = state.discovered.companions || [];
+        const companions = state.companions || [];
         const roles = {};
-        companions.forEach(id => {
-            const comp = window.COMPANION_POOL.find(c => c.id === id);
+        companions.forEach(c => {
+            const compId = typeof c === 'string' ? c : c.id;
+            const comp = window.COMPANION_POOL.find(p => p.id === compId);
             if (comp && comp.role) roles[comp.role] = (roles[comp.role] || 0) + 1;
         });
         return {
@@ -740,6 +737,16 @@ class Game {
         }
     }
 
+    /** 🖼️ 통합 모달 호출 함수 */
+    showModal(title, contentHtml) {
+        const modal = document.getElementById('modal-container');
+        const body = document.getElementById('modal-body');
+        if (!modal || !body) return;
+
+        body.innerHTML = `<h3>${title}</h3><hr style="opacity:0.1; margin:10px 0;">${contentHtml}`;
+        modal.classList.remove('hidden');
+    }
+
     showToast(message, type = 'info') {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
@@ -749,7 +756,8 @@ class Game {
     }
 
     closeModal() {
-        document.getElementById('modal-container').classList.add('hidden');
+        const modal = document.getElementById('modal-container');
+        if (modal) modal.classList.add('hidden');
     }
 }
 
