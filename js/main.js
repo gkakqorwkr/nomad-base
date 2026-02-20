@@ -33,12 +33,12 @@ class Game {
     startLoop() {
         const tick = () => {
             const now = Date.now();
-            
+
             // 1. 자동 자원 생산 엔진 업데이트
             if (this.farmingEngine && typeof this.farmingEngine.update === 'function') {
                 this.farmingEngine.update(now);
             }
-            
+
             // 2. 이동 상태 업데이트
             const travelStatus = this.travelManager.update(now);
 
@@ -55,10 +55,10 @@ class Game {
         // 중복 실행을 방지하기 위해 외부에서 한 번만 호출하도록 구조 확인
         requestAnimationFrame(tick);
     }
-    
+
     updateUI() {
         const state = this.dataManager.state;
-        
+
         // [수정] Number()를 사용하여 문자열 결합 방지 및 소수점 제거
         const currentScrap = Math.floor(Number(state.resources.scrap) || 0);
         const currentEnergy = Math.floor(Number(state.resources.energy) || 0);
@@ -70,7 +70,7 @@ class Game {
         // 이동 프로그레스바 로직
         const progress = document.getElementById('travel-progress');
         const fill = document.getElementById('progress-bar-fill');
-        
+
         if (state.travel.isMoving) {
             progress.classList.remove('hidden');
             const total = state.travel.endTime - state.travel.startTime;
@@ -84,7 +84,7 @@ class Game {
         }
     }
 
-/** 수동 탐사 처리 (하이리스크 하이리턴 + 식재료 드롭) */
+    /** 수동 탐사 처리 (하이리스크 하이리턴 + 식재료 드롭) */
     handleScavenge() {
         const state = this.dataManager.state;
         const region = window.REGIONS.find(r => r.id === state.currentRegionId);
@@ -113,10 +113,10 @@ class Game {
         if (Math.random() < (0.6 + region.rareDropChance)) {
             const ingredientKeys = Object.keys(window.INGREDIENTS);
             const randomKey = ingredientKeys[Math.floor(Math.random() * ingredientKeys.length)];
-            
+
             if (!state.inventory.ingredients[randomKey]) state.inventory.ingredients[randomKey] = 0;
             state.inventory.ingredients[randomKey]++;
-            
+
             const ing = window.INGREDIENTS[randomKey];
             dropMsg = ` | ${ing.icon} ${ing.name} 발견!`;
         }
@@ -124,9 +124,9 @@ class Game {
         // 결과 알림
         let msg = `🔩 고철 +${gainedScrap}${dropMsg}`;
         if (damage > 0) msg += ` (⚠️ 위험! 에너지 -${damage})`;
-        
+
         this.showToast(msg, damage > 0 ? 'warning' : 'info');
-        
+
         this.dataManager.save();
         this.updateUI();
     }
@@ -206,7 +206,7 @@ class Game {
     }
 
     /** 도감/인벤토리 메뉴 */
-        /** 도감/인벤토리 메뉴 (수정본) */
+    /** 도감/인벤토리 메뉴 (수정본) */
     openCollectionMenu() {
         const state = this.dataManager.state;
         const foodInv = state.inventory.food || {};
@@ -238,7 +238,7 @@ class Game {
             // [수정] 데이터가 객체({count:1...})면 .count를 사용, 숫자면 그대로 사용
             const count = (typeof foodData === 'object') ? foodData.count : foodData;
             const recipe = SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽' };
-            
+
             foodHtml += `
                 <div class="inventory-slot" onclick="window.game.showFoodDetail('${id}')">
                     <div style="font-size:1.5rem;">${recipe.icon}</div>
@@ -426,28 +426,107 @@ class Game {
     }
 
     handleTravelStatus(status) {
-        const state = this.dataManager.state;
-
         if (status.status === 'arrived') {
-            // 위치 확정 및 상태 리셋
-            state.currentRegionId = state.travel.targetRegionId; 
-            state.travel.isMoving = false; 
-            
-            // 매니저 내부 변수들 초기화 (매우 중요)
-            if (this.travelManager.completeTravel) {
-                this.travelManager.completeTravel();
-            }
-
-            this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
-            this.dataManager.save();
-            this.updateUI(); 
-        } 
-        // 보스 조우 시 처리 추가
-        else if (status.status === 'boss_triggered') {
+            this.showToast(`🚚 ${status.name}에 도착했습니다!`);
+            this.updateUI();
+        } else if (status.status === 'event_triggered') {
+            this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
+            this.openEventModal();
+        } else if (status.status === 'boss_triggered') {
+            this.showToast("🚨 경고! 구역의 우두머리가 나타났습니다!", 'error');
             this.openBattleMenu(status.boss);
         }
-        else if (status.status === 'event_triggered') {
-            this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
+    }
+
+    /** 돌발 이벤트 모달 */
+    openEventModal() {
+        const event = TRAVEL_EVENTS[Math.floor(Math.random() * TRAVEL_EVENTS.length)];
+        let optionsHtml = '';
+        event.options.forEach((opt, idx) => {
+            optionsHtml += `<button class="upgrade-btn" style="margin: 5px; width: 100%;" onclick="window.game.handleEventOption(${JSON.stringify(opt).replace(/"/g, '&quot;')})">${opt.text}</button>`;
+        });
+
+        document.getElementById('modal-body').innerHTML = `
+            <div style="padding:20px; text-align:center;">
+                <h2 style="color:var(--accent-color);">⚠️ 돌발 상황: ${event.name}</h2>
+                <p style="margin:20px 0; line-height:1.6;">${event.desc}</p>
+                <div style="display:flex; flex-direction:column; align-items:center;">
+                    ${optionsHtml}
+                </div>
+            </div>
+        `;
+        document.getElementById('modal-container').classList.remove('hidden');
+    }
+
+    handleEventOption(option) {
+        let message = "상황이 종료되었습니다.";
+        let penaltyTime = 0;
+
+        if (option.action === 'loot') {
+            this.dataManager.state.resources.scrap += option.reward.scrap;
+            message = `💰 고철 ${option.reward.scrap}개를 획득했습니다!`;
+        } else if (option.action === 'speed') {
+            this.dataManager.state.resources.energy = Math.max(0, this.dataManager.state.resources.energy - option.penalty.energy);
+            message = `⚡ 에너지를 ${option.penalty.energy} 소모하여 빠르게 빠져나왔습니다.`;
+        } else if (option.action === 'wait') {
+            penaltyTime = option.penalty.time;
+            message = `⏰ ${penaltyTime}초 동안 비를 피하며 정비했습니다.`;
+        }
+
+        this.showToast(message);
+        this.travelManager.resumeTravel(penaltyTime);
+        this.closeModal();
+        this.dataManager.save();
+    }
+
+    /** 보스 전투 메뉴 (사용자 코드 naming 준수) */
+    openBattleMenu(boss) {
+        window.battleManager.startBattle(boss);
+        this.renderBossBattle();
+        document.getElementById('modal-container').classList.remove('hidden');
+    }
+
+    renderBossBattle() {
+        const boss = window.battleManager.currentBoss;
+        const hpPercent = (window.battleManager.bossHp / boss.hp) * 100;
+
+        document.getElementById('modal-body').innerHTML = `
+            <div style="padding:20px; text-align:center;">
+                <h2 style="color:#ff4444;">🚨 보스 출현: ${boss.name}</h2>
+                <div style="font-size:5rem; margin:20px 0;">${boss.icon || '👾'}</div>
+                
+                <div style="width:100%; height:20px; background:#333; border-radius:10px; margin-bottom:10px; overflow:hidden;">
+                    <div id="boss-hp-fill" style="width:${hpPercent}%; height:100%; background:#ff4444; transition: width 0.3s;"></div>
+                </div>
+                <div style="font-size:0.8rem; color:#aaa; margin-bottom:20px;">HP: ${window.battleManager.bossHp} / ${boss.hp}</div>
+
+                <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:10px; margin-bottom:20px;">
+                    <p style="font-size:0.9rem; color:#ddd;">앞길을 막는 거대 괴수를 물리쳐야 합니다!</p>
+                </div>
+
+                <button class="upgrade-btn" style="width:100%; height:60px; font-size:1.2rem;" onclick="window.game.handleBossAttack()">공격하기!</button>
+            </div>
+        `;
+    }
+
+    handleBossAttack() {
+        const result = window.battleManager.attack();
+        if (!result) return;
+
+        if (result.status === 'hit') {
+            this.showToast(`💥 ${result.damage}의 피해를 입혔습니다! (반격: -${result.bossDamage}E)`, 'warning');
+            this.renderBossBattle();
+        } else if (result.status === 'win') {
+            this.showToast(`🏆 ${window.battleManager.currentBoss.name}을(를) 격퇴했습니다! 보상: ${result.reward}S`, 'info');
+            this.travelManager.resumeAfterBattle();
+            this.closeModal();
+            this.updateUI();
+        }
+
+        if (this.dataManager.state.resources.energy <= 0) {
+            this.showToast("😱 에너지가 고갈되었습니다! 전투 불능!", "error");
+            this.travelManager.resumeAfterBattle();
+            this.closeModal();
         }
     }
 

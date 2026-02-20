@@ -54,7 +54,7 @@ class TravelManager {
     /** 이동 진행률 업데이트 및 완료 체크 */
     update(now) {
         const state = dataManager.state;
-        
+
         // 이동 중이 아니거나 이벤트/전투 중이면 즉시 중단
         if (!state || !state.travel.isMoving || state.travel.isEventActive || state.travel.isBattleActive) {
             return null;
@@ -76,11 +76,12 @@ class TravelManager {
 
         // 2. 도착 체크 (시간 완료 시)
         if (now >= state.travel.endTime) {
-            return this.completeTravel();
+            const result = this.completeTravel();
+            return { ...result, name: this.getCurrentRegion().name };
         }
 
-        // 3. 일반 돌발 이벤트 (낮은 확률)
-        if (targetRegion && !targetRegion.boss && Math.random() < 0.005) {
+        // 3. 일반 돌발 이벤트 (확률 0.5% -> 0.05%로 하향 조정)
+        if (targetRegion && !targetRegion.boss && Math.random() < 0.0005) {
             state.travel.isEventActive = true;
             dataManager.save();
             return { status: 'event_triggered' };
@@ -92,20 +93,20 @@ class TravelManager {
     /** 도착 처리 */
     completeTravel() {
         const state = dataManager.state;
-        
+
         // 목적지 저장
         const targetId = state.travel.targetRegionId;
-        
+
         // 상태 완전 초기화 (순서 중요: 초기화 후 현재 지역 변경)
         state.travel.isMoving = false;
         state.travel.startTime = 0;
         state.travel.endTime = 0;
         state.travel.targetRegionId = null;
         state.travel.bossEncountered = false;
-        
-        state.currentRegionId = targetId; 
-        
-        dataManager.save(); 
+
+        state.currentRegionId = targetId;
+
+        dataManager.save();
         return { status: 'arrived' };
     }
 
