@@ -429,20 +429,24 @@ class Game {
         const state = this.dataManager.state;
 
         if (status.status === 'arrived') {
-            // 위치 및 상태 갱신
+            // 위치 확정 및 상태 리셋
             state.currentRegionId = state.travel.targetRegionId; 
             state.travel.isMoving = false; 
             
-            // [중요] 매니저 내부의 이동 데이터도 초기화 (필요시)
-            if(this.travelManager.finishTravel) {
-                this.travelManager.finishTravel();
+            // 매니저 내부 변수들 초기화 (매우 중요)
+            if (this.travelManager.completeTravel) {
+                this.travelManager.completeTravel();
             }
 
             this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
-            
             this.dataManager.save();
             this.updateUI(); 
-        } else if (status.status === 'event_triggered') {
+        } 
+        // 보스 조우 시 처리 추가
+        else if (status.status === 'boss_triggered') {
+            this.openBattleMenu(status.boss);
+        }
+        else if (status.status === 'event_triggered') {
             this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
         }
     }
@@ -488,6 +492,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
