@@ -195,7 +195,6 @@ class Game {
     }
 
     /** 도감/인벤토리 메뉴 */
-    /** 도감/인벤토리 메뉴 */
     openCollectionMenu() {
         const state = this.dataManager.state;
         const foodInv = state.inventory.food || {};
@@ -385,18 +384,25 @@ class Game {
     }
 
     handleTravelStatus(status) {
+    const state = this.dataManager.state;
+
     if (status.status === 'arrived') {
-        // [중요] 실제로 목적지 ID를 현재 지역 ID로 덮어씌워야 합니다.
-        const state = this.dataManager.state;
+        // 1. 현재 위치 데이터 갱신
         state.currentRegionId = state.travel.targetRegionId; 
         
+        // 2. 이동 상태 종료 (게이지 UI를 숨기기 위해 반드시 필요)
+        state.travel.isMoving = false; 
+
         this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
-        this.dataManager.save(); // 변경된 지역 저장
+        
+        // 3. 상태 저장 및 UI 새로고침
+        this.dataManager.save();
         this.updateUI(); 
     } else if (status.status === 'event_triggered') {
         this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
     }
 }
+
 
     renderCompanionList() {
         const companions = this.dataManager.state.companions;
@@ -438,6 +444,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
