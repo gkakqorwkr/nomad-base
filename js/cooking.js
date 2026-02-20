@@ -8,7 +8,7 @@ window.INGREDIENTS = {
     "glow_mushroom": { name: "발광 버섯", icon: "🍄", type: "veg", adj: "번쩍이는", power: 15 },
     "radioactive_tomato": { name: "방사능 토마토", icon: "🍅", type: "veg", adj: "톡 쏘는", power: 12 },
     "dead_cactus": { name: "선인장이었던 것", icon: "🌵", type: "veg", adj: "거친", power: 8 },
-    "mutant_corn": { name: "변이 옥수수. 유전자 조작이나 아동 착취와는 관계가 없다.", icon: "🌽", type: "veg", adj: "팝핀", power: 10 },
+    "mutant_corn": { name: "유전자 조작 옥수수", icon: "🌽", type: "veg", adj: "팝핀", power: 10 },
     "acid_lemon": { name: "염기성 레몬", icon: "🍋", type: "veg", adj: "시큼한", power: 12 },
     "ghost_flower": { name: "식인 꽃", icon: "🌷", type: "veg", adj: "오싹한", power: 15 },
 
@@ -55,4 +55,5 @@ window.COOKING_METHODS = [
     { name: "튀김", suffix: "튀김", type: "fluid" },
     { name: "샐러드", suffix: "샐러드", type: "veg" }
 ];
+
 
