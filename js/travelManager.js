@@ -49,12 +49,12 @@ class TravelManager {
     }
 
     /** 이동 진행률 업데이트 및 완료 체크 */
-    update(now) {
+   update(now) {
         const state = dataManager.state;
         
-        // 이동 중이 아니거나 이벤트/전투 중이면 체크 중단
-        if (!state.travel.isMoving || state.travel.isEventActive || state.travel.isBattleActive) return null;
-
+        // 이동 중이 아니면 아무것도 반환하지 않음 (null)
+        if (!state.travel || !state.travel.isMoving) return null;
+        if (state.travel.isEventActive || state.travel.isBattleActive) return null;
         const total = state.travel.endTime - state.travel.startTime;
         const current = now - state.travel.startTime;
         const progress = current / total;
@@ -139,4 +139,5 @@ class TravelManager {
 
 // 전역 할당
 window.travelManager = new TravelManager();
+
 
