@@ -33,20 +33,20 @@ class CookingManager {
 
         let result;
         if (recipeMatch) {
-            // [변경] 레시피 도감 등재 요리: 에너지 30
-            result = { ...recipeMatch, recovery: 30 };
+            // [변경] 레시피 도감 등재 요리: 에너지 35
+            result = { ...recipeMatch, recovery: 35 };
             if (!state.discovered.recipes.includes(result.id)) {
                 state.discovered.recipes.push(result.id);
             }
         } else {
-            // [변경] 일반 요리 밸런스 (1개: 10, 2개: 20)
-            const recoveryAmount = ingredientIds.length === 2 ? 20 : 10;
+            // [변경] 일반 요리 밸런스 (1개: 15, 2개: 25)
+            const recoveryAmount = ingredientIds.length === 2 ? 25 : 15;
             result = {
                 id: 'porridge',
                 name: '황무지 죽',
                 icon: '🥣',
                 recovery: recoveryAmount,
-                desc: `생존을 위한 한 끼입니다. 맛이 좋지는 않네요... (에너지 +${recoveryAmount})`
+                desc: `와... 진짜 먹는다고? (에너지 +${recoveryAmount})`
             };
         }
 
@@ -76,7 +76,7 @@ class CookingManager {
         if (!foodItem || foodItem.count <= 0) return { success: false };
 
         // [변경] 저장된 recovery 수치를 사용하여 회복
-        const recoveryAmount = foodItem.recovery || 10;
+        const recoveryAmount = foodItem.recovery || 15;
 
         foodItem.count--;
         if (foodItem.count === 0) delete state.inventory.food[foodKey];
@@ -136,4 +136,5 @@ class CookingManager {
 }
 
 window.cookingManager = new CookingManager();
+
 
