@@ -411,24 +411,26 @@ class Game {
     }
 
     handleTravelStatus(status) {
-    const state = this.dataManager.state;
+        const state = this.dataManager.state;
 
-    if (status.status === 'arrived') {
-        // 1. 현재 위치 데이터 갱신
-        state.currentRegionId = state.travel.targetRegionId; 
-        
-        // 2. 이동 상태 종료 (게이지 UI를 숨기기 위해 반드시 필요)
-        state.travel.isMoving = false; 
+        if (status.status === 'arrived') {
+            // 위치 및 상태 갱신
+            state.currentRegionId = state.travel.targetRegionId; 
+            state.travel.isMoving = false; 
+            
+            // [중요] 매니저 내부의 이동 데이터도 초기화 (필요시)
+            if(this.travelManager.finishTravel) {
+                this.travelManager.finishTravel();
+            }
 
-        this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
-        
-        // 3. 상태 저장 및 UI 새로고침
-        this.dataManager.save();
-        this.updateUI(); 
-    } else if (status.status === 'event_triggered') {
-        this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
+            this.showToast(`🚚 ${this.travelManager.getCurrentRegion().name}에 도착했습니다!`);
+            
+            this.dataManager.save();
+            this.updateUI(); 
+        } else if (status.status === 'event_triggered') {
+            this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
+        }
     }
-}
 
 
     renderCompanionList() {
@@ -471,6 +473,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
