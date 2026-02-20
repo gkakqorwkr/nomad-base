@@ -45,7 +45,7 @@ window.SPECIAL_RECIPES = [
     { id: "cook_11", name: "괴수 등갈비", ingredients: ["monster_meat", "rusty_salt"], icon: "🍖", recovery: 20, desc: "짭짤하고 쫄깃한 고기 요리." },
     { id: "cook_12", name: "레모네이드", ingredients: ["acid_lemon", "sugar_cube"], icon: "🍹", recovery: 20, desc: "갈증을 날려버리는 상큼함." },
     { id: "cook_13", name: "팝콘", ingredients: ["mutant_corn", "blue_oil"], icon: "🍿", recovery: 20, desc: "옥수수가 변하다니! 조작인게 분명합니다!" },
-    { id: "cook_14", name: "두바이 쫀득 쿠키", ingredients: ["wild_herb", "sugar_cube"], icon: "🍪", recovery: 20, desc: "황무지에서 유행하는 그 맛, 쫀득함이 살아있습니다." }
+    { id: "cook_14", name: "두바이 쫀득 쿠키", ingredients: ["wild_herb", "sugar_cube"], icon: "🧆", recovery: 20, desc: "황무지에서 유행하는 그 맛, 쫀득함이 살아있습니다." }
 ];
 
 /** 조리법 종류 */
@@ -57,3 +57,4 @@ window.COOKING_METHODS = [
     { name: "튀김", suffix: "튀김", type: "fluid" },
     { name: "샐러드", suffix: "샐러드", type: "veg" }
 ];
+
