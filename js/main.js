@@ -34,6 +34,11 @@ class Game {
         const tick = () => {
             const now = Date.now();
             
+            // [추가] 시간이 지남에 따라 고철/에너지 자동 생산 (방치형 로직)
+            if (this.farmingEngine && this.farmingEngine.update) {
+                this.farmingEngine.update(now);
+            }
+            
             // 1. 매 프레임마다 이동 상태 업데이트 및 결과 확인
             const travelStatus = this.travelManager.update(now);
 
@@ -42,14 +47,14 @@ class Game {
                 this.handleTravelStatus(travelStatus);
             }
 
-            // 3. 이동 중일 때만 UI 실시간 갱신 (에너지/고철 등도 포함)
+            // 3. UI 실시간 갱신 (이제 고철 수치가 올라가는 것이 보일 겁니다)
             this.updateUI();
 
             requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
     }
-
+    
     updateUI() {
         const state = this.dataManager.state;
         document.getElementById('scrap-value').textContent = Math.floor(state.resources.scrap);
@@ -473,6 +478,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
