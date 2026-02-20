@@ -58,3 +58,4 @@ window.COOKING_METHODS = [
     { name: "샐러드", suffix: "샐러드", type: "veg" }
 ];
 
+
