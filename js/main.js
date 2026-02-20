@@ -31,24 +31,24 @@ class Game {
     }
 
     startLoop() {
-    const tick = () => {
-        const now = Date.now();
-        const travelStatus = this.travelManager.update(now);
+        const tick = () => {
+            const now = Date.now();
+            
+            // 1. 매 프레임마다 이동 상태 업데이트 및 결과 확인
+            const travelStatus = this.travelManager.update(now);
 
-        // [변경] 이동 상태 변화 처리
-        if (travelStatus) {
-            this.handleTravelStatus(travelStatus);
-        }
+            // 2. 이동 결과(도착 등)가 발생했다면 처리 함수 호출
+            if (travelStatus && travelStatus.status) {
+                this.handleTravelStatus(travelStatus);
+            }
 
-        // [추가] 이동 중일 때는 게이지를 실시간으로 그리기 위해 UI 업데이트 호출
-        if (this.dataManager.state.travel.isMoving) {
+            // 3. 이동 중일 때만 UI 실시간 갱신 (에너지/고철 등도 포함)
             this.updateUI();
-        }
 
+            requestAnimationFrame(tick);
+        };
         requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
- }
+    }
 
     updateUI() {
         const state = this.dataManager.state;
@@ -471,6 +471,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
