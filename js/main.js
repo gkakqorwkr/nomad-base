@@ -191,13 +191,14 @@ class Game {
     }
 
     /** 도감/인벤토리 메뉴 */
+        /** 도감/인벤토리 메뉴 (수정본) */
     openCollectionMenu() {
         const state = this.dataManager.state;
         const foodInv = state.inventory.food || {};
         const relicInv = state.inventory.relics || [];
         const itemInv = state.inventory.items || {};
 
-        // 1. 요리 레시피 섹션 (추가된 부분)
+        // 1. 요리 레시피 섹션
         let recipeHtml = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:20px;">';
         window.SPECIAL_RECIPES.forEach(recipe => {
             const ingredientIcons = recipe.ingredients.map(ingId => {
@@ -215,22 +216,25 @@ class Game {
         });
         recipeHtml += '</div>';
 
-        // 2. 식품 보관함 섹션
+        // 2. 식품 보관함 섹션 (Object 오류 수정 및 클릭 시 상세 정보창 호출)
         let foodHtml = '<div class="inventory-grid">';
         Object.keys(foodInv).forEach(id => {
-            const count = foodInv[id];
+            const foodData = foodInv[id];
+            // [수정] 데이터가 객체({count:1...})면 .count를 사용, 숫자면 그대로 사용
+            const count = (typeof foodData === 'object') ? foodData.count : foodData;
             const recipe = SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽' };
+            
             foodHtml += `
-                <div class="inventory-slot" onclick="window.game.handleEat('${id}')">
-                    <div>${recipe.icon}</div>
+                <div class="inventory-slot" onclick="window.game.showFoodDetail('${id}')">
+                    <div style="font-size:1.5rem;">${recipe.icon}</div>
                     <div class="slot-count">${count}</div>
-                    <div style="font-size:0.6rem; color:#aaa; margin-top:2px;">먹기</div>
+                    <div style="font-size:0.55rem; color:#aaa; margin-top:2px;">정보</div>
                 </div>`;
         });
         if (Object.keys(foodInv).length === 0) foodHtml = '<p style="color:#666; padding:10px;">저장된 요리가 없습니다.</p>';
         foodHtml += '</div>';
 
-        // 3. 유물 섹션
+        // 3. 유물 섹션 (기존 코드 유지)
         let relicHtml = '<div class="inventory-grid">';
         window.RELICS.forEach(r => {
             const isOwned = relicInv.includes(r.id);
@@ -242,7 +246,7 @@ class Game {
         });
         relicHtml += '</div>';
 
-        // 4. 합성 재료 섹션
+        // 4. 합성 재료 섹션 (기존 코드 유지)
         let itemsHtml = '<div class="inventory-grid" id="forge-selection">';
         Object.keys(itemInv).forEach(id => {
             const count = itemInv[id];
@@ -255,7 +259,7 @@ class Game {
         if (Object.keys(itemInv).length === 0) itemsHtml = '<p style="color:#666; padding:10px;">합성 재료가 없습니다.</p>';
         itemsHtml += '</div>';
 
-        // 5. 전체 레이아웃 합치기
+        // 5. 전체 레이아웃 (상세 설명 팝업 공간 추가)
         document.getElementById('modal-body').innerHTML = `
             <div style="padding:15px; max-height:80vh; overflow-y:auto;">
                 <h2 style="margin-bottom:15px;">📜 생존 도감</h2>
@@ -266,7 +270,9 @@ class Game {
                 <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">🍞 보유 중인 요리</h3>
                 ${foodHtml}
 
-                <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">🗿 발견한 유물 (${state.inventory.relics.length}/30)</h3>
+                <div id="food-detail-view" class="hidden" style="margin-top:15px; padding:15px; border:1px solid var(--accent-color); border-radius:10px; background:rgba(255,165,0,0.1); text-align:center;"></div>
+
+                <h3 style="margin:30px 0 10px; font-size:0.9rem; color:#aaa;">🗿 발견한 유물 (${state.inventory.relics.length}/30)</h3>
                 ${relicHtml}
 
                 <h3 style="margin:20px 0 10px; font-size:0.9rem; color:#aaa;">⚒️ 아이템 합성</h3>
@@ -280,12 +286,38 @@ class Game {
         this.forgeSelected = [];
         document.getElementById('modal-container').classList.remove('hidden');
     }
+
+    /** [추가] 요리 상세 정보 표시 기능 */
+    showFoodDetail(id) {
+        const foodData = this.dataManager.state.inventory.food[id];
+        const recipe = window.SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽', desc: '평범한 음식입니다.' };
+        const detailView = document.getElementById('food-detail-view');
+
+        const count = (typeof foodData === 'object') ? foodData.count : foodData;
+        const recovery = (typeof foodData === 'object') ? foodData.recovery : 10;
+
+        detailView.innerHTML = `
+            <div style="font-size:2.5rem; margin-bottom:10px;">${recipe.icon}</div>
+            <h4 style="color:var(--accent-color); font-weight:bold;">${recipe.name}</h4>
+            <p style="font-size:0.8rem; color:#ddd; margin:10px 0;">${recipe.desc || '생존을 위한 소중한 식량입니다.'}</p>
+            <div style="font-size:0.8rem; margin-bottom:15px;">회복량: <span style="color:var(--accent-color); font-weight:bold;">⚡ +${recovery}</span> (보유: ${count}개)</div>
+            <button class="upgrade-btn" onclick="window.game.handleEat('${id}')" style="width:100%; padding:10px;">이 아이템 먹기</button>
+        `;
+        detailView.classList.remove('hidden');
+        detailView.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    /** 먹기 처리 (기존 handleEat 수정) */
     handleEat(foodId) {
         const result = this.cookingManager.eat(foodId);
         if (result.success) {
             this.showToast(`에너지가 ${result.amount} 회복되었습니다!`);
-            this.openCollectionMenu(); // 갱신
+            this.openCollectionMenu(); // UI 갱신
+        } else {
+            this.showToast("사용할 수 있는 아이템이 없습니다.", "error");
         }
+    }
+
     }
 
     /** 합성용 아이템 선택 */
@@ -440,6 +472,7 @@ class Game {
 
 // GUI 초기화 및 전역 할당
 window.game = new Game();
+
 
 
 
