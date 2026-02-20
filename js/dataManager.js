@@ -43,7 +43,16 @@ class DataManager {
                     engine: { level: 1, name: '낡은 엔진' },
                     armor: { level: 1, name: '녹슨 철판' },
                     storage: { level: 1, name: '작은 상자' }
-                }
+                },
+                modules: {}      // { id: { level: 1, ... } }
+            },
+            world: {
+                weather: "clear", // clear, acid_rain, emp_storm, sandstorm
+                weatherEndTime: 0
+            },
+            missions: {
+                active: null,      // { id, type, deadline, ... }
+                completed: []
             },
             discovered: {
                 recipes: [],
@@ -78,6 +87,11 @@ class DataManager {
                 if (!data.inventory.relics) data.inventory.relics = [];
                 if (!data.stats) data.stats = { totalScavenges: 0, gachaCount: 0, relicsFound: 0 };
                 if (!data.discovered) data.discovered = { recipes: [], relics: [] };
+
+                // v2.0 신규 필드 마이그레이션
+                if (!data.vehicle.modules) data.vehicle.modules = {};
+                if (!data.world) data.world = { weather: "clear", weatherEndTime: 0 };
+                if (!data.missions) data.missions = { active: null, completed: [] };
 
                 return data;
             }

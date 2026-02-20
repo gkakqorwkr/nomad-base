@@ -42,9 +42,10 @@ class BattleManager {
             return { status: 'win', damage, reward };
         }
 
-        // 보스의 반격 (장갑에 의해 경감됨, 100% -> 1.0, 20% -> 0.2)
+        // 보스의 반격 (장갑 경감 + 동료 시너지 반영)
         const armorReduction = vehicleManager.getBonus('armor') * 0.01;
-        const bossDamage = Math.floor(10 * armorReduction);
+        const synergy = window.game ? window.game.getSynergyBonus() : { damageReduction: 0 };
+        const bossDamage = Math.floor(10 * armorReduction * (1 - synergy.damageReduction));
         state.resources.energy = Math.max(0, state.resources.energy - bossDamage);
 
         return { status: 'hit', damage, hp: this.bossHp, bossDamage };

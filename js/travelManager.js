@@ -60,11 +60,20 @@ class TravelManager {
             return null;
         }
 
+        // 기후 엔진 업데이트
+        if (window.weatherManager) window.weatherManager.update();
+        const currentWeather = window.weatherManager ? window.weatherManager.getCurrentWeather() : { energyMult: 1 };
+
         const total = state.travel.endTime - state.travel.startTime;
         const current = now - state.travel.startTime;
-        const progress = current / total;
+        let progress = current / total;
 
         const targetRegion = REGIONS.find(r => r.id === state.travel.targetRegionId);
+
+        // 0. 미션 발생 체크 (이동 중일 때만)
+        if (window.missionManager && window.missionManager.tryTriggerMission()) {
+            // 특별한 상태 변경은 missionManager 내부에서 처리
+        }
 
         // 1. 보스 조우 체크 (진행률 50% 지점)
         if (targetRegion && targetRegion.boss && progress >= 0.5 && !state.travel.bossEncountered) {
@@ -106,8 +115,14 @@ class TravelManager {
 
         state.currentRegionId = targetId;
 
+        // [Phase 6] 암시장 등장 체크
+        let marketTriggered = false;
+        if (window.blackMarketManager && window.blackMarketManager.tryTriggerMarket()) {
+            marketTriggered = true;
+        }
+
         dataManager.save();
-        return { status: 'arrived' };
+        return { status: 'arrived', name: REGIONS.find(r => r.id === targetId).name, market: marketTriggered };
     }
 
     /** 강제 종료 및 상태 초기화 (오류 복구용) */

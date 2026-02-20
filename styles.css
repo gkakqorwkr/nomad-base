@@ -112,6 +112,7 @@ body {
     font-size: 0.9rem;
 }
 
+/* 이동 프로그레스 */
 #travel-progress {
     width: 200px;
     height: 6px;
@@ -125,6 +126,52 @@ body {
     height: 100%;
     background: var(--accent-color);
     width: 0%;
+}
+
+/* 기후 정보 스타일 */
+#weather-info {
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin-top: 4px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 무전기 미션 버튼 스타일 */
+#radio-mission-btn {
+    position: absolute;
+    right: 20px;
+    bottom: 100px;
+    background: #ff4500;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 20px;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.glow-pulse {
+    animation: radio-pulse 1.5s infinite;
+}
+
+@keyframes radio-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 69, 0, 0.7);
+    }
+
+    70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 10px rgba(255, 69, 0, 0);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 69, 0, 0);
+    }
 }
 
 /* 탐사 버튼 */

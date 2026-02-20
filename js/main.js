@@ -62,6 +62,29 @@ class Game {
         document.getElementById('energy-value').textContent = currentEnergy;
         document.getElementById('region-name').textContent = this.travelManager.getCurrentRegion().name;
 
+        // 기후 표시 업데이트
+        const currentWeather = window.weatherManager ? window.weatherManager.getCurrentWeather() : null;
+        if (currentWeather) {
+            const weatherEl = document.getElementById('weather-info');
+            if (weatherEl) {
+                weatherEl.innerHTML = `<span title="${currentWeather.desc}">${currentWeather.icon} ${currentWeather.name}</span>`;
+                weatherEl.style.color = currentWeather.color;
+            }
+        }
+
+        // 미션 알림 업데이트
+        const activeMission = state.missions.active;
+        const radioBtn = document.getElementById('radio-mission-btn');
+        if (radioBtn) {
+            if (activeMission) {
+                radioBtn.classList.add('glow-pulse');
+                radioBtn.classList.remove('hidden');
+            } else {
+                radioBtn.classList.remove('glow-pulse');
+                radioBtn.classList.add('hidden');
+            }
+        }
+
         // 이동 프로그레스바 로직
         const progress = document.getElementById('travel-progress');
         const fill = document.getElementById('progress-bar-fill');
@@ -84,12 +107,16 @@ class Game {
         const state = this.dataManager.state;
         const region = window.REGIONS.find(r => r.id === state.currentRegionId);
 
-        if (state.resources.energy < 5) {
+        // 기후 배율 적용
+        const weather = window.weatherManager ? window.weatherManager.getCurrentWeather() : { energyMult: 1, dropMult: 1 };
+        const energyCost = Math.floor(5 * weather.energyMult);
+
+        if (state.resources.energy < energyCost) {
             this.showToast("에너지가 부족합니다!", 'error');
             return;
         }
 
-        state.resources.energy -= 5;
+        state.resources.energy -= energyCost;
 
         // 1. 패널티 계산
         let damage = 0;
@@ -100,10 +127,10 @@ class Game {
 
         // 2. 고철 보상 계산
         const baseScrap = Math.floor(Math.random() * 11) + 5;
-        const gainedScrap = Math.floor(baseScrap * region.bonus);
+        const gainedScrap = Math.floor(baseScrap * region.bonus * weather.dropMult);
         state.resources.scrap += gainedScrap;
 
-        // 3. [추가] 식재료 보상 계산 (기존 farmingEngine의 역할을 대신함)
+        // 3. [추가] 식재료 보상 계산
         let dropMsg = "";
         if (Math.random() < (0.6 + region.rareDropChance)) {
             const ingredientKeys = Object.keys(window.INGREDIENTS);
@@ -116,17 +143,54 @@ class Game {
             dropMsg = ` | ${ing.icon} ${ing.name} 발견!`;
         }
 
-        // 결과 알림
-        let msg = `🔩 고철 +${gainedScrap}${dropMsg}`;
-        if (damage > 0) msg += ` (⚠️ 위험! 에너지 -${damage})`;
+        // 4. [추가] 합성용 아이템 드롭 로직
+        if (Math.random() < 0.3) {
+            this.itemManager.addItem('trash', 1, 'items');
+            dropMsg += ` | 🔩 고철 부스러기 획득!`;
+        }
 
-        this.showToast(msg, damage > 0 ? 'warning' : 'info');
-
-        this.dataManager.save();
+        this.showToast(`🦾 탐사 완료: +${gainedScrap}S${dropMsg}`, 'success');
         this.updateUI();
+        this.dataManager.save();
     }
-    //
 
+    /** 📻 미션 모달 열기 */
+    openMissionModal() {
+        const mission = this.dataManager.state.missions.active;
+        if (!mission) return;
+
+        const html = `
+            <div class="mission-card" style="background: rgba(40, 40, 40, 0.9); padding: 15px; border-radius: 8px; border-left: 4px solid #ff4500; margin-bottom: 20px;">
+                <h3 style="color:#ff4500;">📻 긴급 무전: ${mission.name}</h3>
+                <p style="margin:10px 0;">${mission.desc}</p>
+                <hr style="opacity:0.2;">
+                <div style="margin: 10px 0;">
+                    <strong>비용:</strong> ${mission.cost.energy ? `⚡${mission.cost.energy}` : ''} 
+                    ${mission.cost.scrap ? `🪙${mission.cost.scrap}S` : ''}
+                </div>
+                <div style="color: #ffd700;">
+                    <strong>보상 예정:</strong> ${mission.reward.scrap ? `${mission.reward.scrap}S ` : ''} 
+                    ${mission.reward.ingredients ? '무작위 식재료 ' : ''}
+                </div>
+                <div style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button onclick="window.game.handleMissionConfirm('${mission.id}')" style="background:#ff4500; flex:1; padding:10px; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer;">도와주기</button>
+                    <button onclick="window.game.closeModal()" style="flex:1; padding:10px; border:none; border-radius:5px; background:#444; color:white; cursor:pointer;">무시하기</button>
+                </div>
+            </div>
+        `;
+        this.showModal("긴급 무선 주파수 수신 중...", html);
+    }
+
+    handleMissionConfirm(id) {
+        const result = window.missionManager.completeMission(id);
+        if (result.success) {
+            this.showToast(result.message, 'success');
+            this.closeModal();
+            this.updateUI();
+        } else {
+            this.showToast(result.message, 'error');
+        }
+    }
     /** 가챠 메뉴 열기 */
     openGachaMenu() {
         const price = this.gachaManager.getCurrentPrice();
@@ -158,6 +222,8 @@ class Game {
         const result = this.gachaManager.roll();
         if (result.success) {
             if (result.isFail) {
+                // 실패 시에도 합성 재료 지급
+                this.itemManager.addItem('trash', 1, 'items');
                 this.showGachaEffect(null, true);
             } else {
                 this.showGachaEffect(result.companion);
@@ -230,13 +296,16 @@ class Game {
         let foodHtml = '<div class="inventory-grid">';
         Object.keys(foodInv).forEach(id => {
             const foodData = foodInv[id];
-            // [수정] 데이터가 객체({count:1...})면 .count를 사용, 숫자면 그대로 사용
-            const count = (typeof foodData === 'object') ? foodData.count : foodData;
-            const recipe = SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽' };
+            const isObj = typeof foodData === 'object';
+            const count = isObj ? foodData.count : foodData;
+
+            // 인벤토리에 저장된 데이터 우선, 없으면 레시피에서 검색, 그것도 없으면 기본값
+            const displayName = isObj ? (foodData.name || '알 수 없는 요리') : (window.SPECIAL_RECIPES.find(r => r.id === id)?.name || '황무지 죽');
+            const displayIcon = isObj ? (foodData.icon || '🥣') : (window.SPECIAL_RECIPES.find(r => r.id === id)?.icon || '🥣');
 
             foodHtml += `
                 <div class="inventory-slot" onclick="window.game.showFoodDetail('${id}')">
-                    <div style="font-size:1.5rem;">${recipe.icon}</div>
+                    <div style="font-size:1.5rem;">${displayIcon}</div>
                     <div class="slot-count">${count}</div>
                     <div style="font-size:0.55rem; color:#aaa; margin-top:2px;">정보</div>
                 </div>`;
@@ -300,16 +369,22 @@ class Game {
     /** [추가] 요리 상세 정보 표시 기능 */
     showFoodDetail(id) {
         const foodData = this.dataManager.state.inventory.food[id];
-        const recipe = window.SPECIAL_RECIPES.find(r => r.id === id) || { icon: '🥣', name: '황무지 죽', desc: '으... 이걸 먹어야 한다고요?' };
+        const isObj = typeof foodData === 'object';
+
+        // 데이터 우선 참조
+        const recipe = window.SPECIAL_RECIPES.find(r => r.id === id);
+        const name = isObj ? (foodData.name || '알 수 없는 요리') : (recipe?.name || '황무지 죽');
+        const icon = isObj ? (foodData.icon || '🥣') : (recipe?.icon || '🥣');
+        const desc = isObj ? (foodData.desc || '정보가 없습니다.') : (recipe?.desc || '으... 이걸 먹어야 한다고요?');
+        const count = isObj ? foodData.count : foodData;
+        const recovery = isObj ? (foodData.recovery || 10) : (recipe?.recovery || 10);
+
         const detailView = document.getElementById('food-detail-view');
 
-        const count = (typeof foodData === 'object') ? foodData.count : foodData;
-        const recovery = (typeof foodData === 'object') ? foodData.recovery : 10;
-
         detailView.innerHTML = `
-            <div style="font-size:2.5rem; margin-bottom:10px;">${recipe.icon}</div>
-            <h4 style="color:var(--accent-color); font-weight:bold;">${recipe.name}</h4>
-            <p style="font-size:0.8rem; color:#ddd; margin:10px 0;">${recipe.desc || '생존을 위한 소중한 식량입니다.'}</p>
+            <div style="font-size:2.5rem; margin-bottom:10px;">${icon}</div>
+            <h4 style="color:var(--accent-color); font-weight:bold;">${name}</h4>
+            <p style="font-size:0.8rem; color:#ddd; margin:10px 0;">${desc}</p>
             <div style="font-size:0.8rem; margin-bottom:15px;">회복량: <span style="color:var(--accent-color); font-weight:bold;">⚡ +${recovery}</span> (보유: ${count}개)</div>
             <button class="upgrade-btn" onclick="window.game.handleEat('${id}')" style="width:100%; padding:10px;">이 아이템 먹기</button>
         `;
@@ -384,37 +459,83 @@ class Game {
         this.vehicleManager.openUpgradeMenu ? this.vehicleManager.openUpgradeMenu() : this.renderUpgradeMenu();
     }
 
-    // fallback용
-    renderUpgradeMenu() {
+    // 차량 업그레이드/모듈 메뉴 렌더링
+    renderUpgradeMenu(tab = 'parts') {
         const summary = this.vehicleManager.getVehicleSummary();
-        let list = '<div class="upgrade-list" style="max-height:60vh; overflow-y:auto;">';
-        summary.forEach(p => {
-            const cur = p.current;
-            const nxt = p.next;
-            list += `
-                <div class="upgrade-card" style="padding:15px; border-bottom:1px solid #444;">
-                    <div style="display:flex; justify-content:space-between;">
-                        <h4>${p.icon} ${p.name} (Lv.${cur.level})</h4>
-                        <button class="upgrade-btn ${this.dataManager.state.resources.scrap >= (nxt ? nxt.cost : Infinity) ? 'can-afford' : ''}" 
-                                onclick="window.game.handleUpgrade('${p.key}')" ${nxt ? '' : 'disabled'}>
-                            ${nxt ? `${nxt.cost}S` : 'MAX'}
-                        </button>
-                    </div>
-                    <div style="font-size:0.8rem; color:var(--accent-color); margin-top:5px;">
-                        ${p.effectName}: ${cur.bonus}${p.unit} ${nxt ? `➔ ${nxt.bonus}${p.unit}` : '(최대)'}
-                    </div>
+        const modules = window.VEHICLE_MODULES;
+        const state = this.dataManager.state;
+
+        let html = `
+            <div style="padding:20px;">
+                <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
+                    <button onclick="window.game.renderUpgradeMenu('parts')" style="flex:1; padding:8px; background:${tab === 'parts' ? 'var(--accent-color)' : '#333'}; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer;">차량 부품</button>
+                    <button onclick="window.game.renderUpgradeMenu('modules')" style="flex:1; padding:8px; background:${tab === 'modules' ? 'var(--accent-color)' : '#333'}; border:none; border-radius:5px; color:white; font-weight:bold; cursor:pointer;">특수 모듈</button>
                 </div>
-            `;
-        });
-        document.getElementById('modal-body').innerHTML = `<div style="padding:15px;"><h2>🔧 차량 개조</h2>${list}</div>`;
-        document.getElementById('modal-container').classList.remove('hidden');
+                <div class="upgrade-list" style="max-height:60vh; overflow-y:auto;">
+        `;
+
+        if (tab === 'parts') {
+            summary.forEach(p => {
+                const cur = p.current;
+                const nxt = p.next;
+                html += `
+                    <div class="upgrade-card" style="padding:15px; border-bottom:1px solid #444; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h4 style="margin:0;">${p.icon} ${p.name} (Lv.${cur.level})</h4>
+                                <div style="font-size:0.75rem; color:#888;">${p.effectName}: ${cur.bonus}${p.unit} ${nxt ? `→ ${nxt.bonus}${p.unit}` : ''}</div>
+                            </div>
+                            <button class="upgrade-btn ${state.resources.scrap >= (nxt ? nxt.cost : Infinity) ? 'can-afford' : ''}" 
+                                    onclick="window.game.handleUpgrade('${p.key}')" 
+                                    ${nxt ? '' : 'disabled'}>
+                                ${nxt ? `${nxt.cost}S` : 'MAX'}
+                            </button>
+                        </div>
+                    </div>`;
+            });
+        } else {
+            Object.keys(modules).forEach(id => {
+                const m = modules[id];
+                const level = state.vehicle.modules[id] || 0;
+                const isMax = level >= m.maxLevel;
+                html += `
+                    <div class="upgrade-card" style="padding:15px; border-bottom:1px solid #444; margin-bottom:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h4 style="margin:0;">${m.icon} ${m.name} (Lv.${level})</h4>
+                                <div style="font-size:0.75rem; color:#888;">${m.desc}</div>
+                            </div>
+                            <button class="upgrade-btn ${state.resources.scrap >= (isMax ? Infinity : m.cost.scrap) ? 'can-afford' : ''}" 
+                                    onclick="window.game.handleModuleUpgrade('${id}')" 
+                                    ${isMax ? 'disabled' : ''}>
+                                ${isMax ? 'MAX' : `${m.cost.scrap}S`}
+                            </button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        html += `</div></div>`;
+        this.showModal("🚛 차량 관리 스테이션", html);
     }
 
     handleUpgrade(key) {
         const result = this.vehicleManager.upgradePart(key);
         if (result.success) {
-            this.showToast(result.message);
-            this.renderUpgradeMenu();
+            this.showToast(result.message, 'success');
+            this.renderUpgradeMenu('parts');
+            this.updateUI();
+        } else {
+            this.showToast(result.message, 'error');
+        }
+    }
+
+    handleModuleUpgrade(id) {
+        const result = this.vehicleManager.upgradeModule(id);
+        if (result.success) {
+            this.showToast(result.message, 'success');
+            this.renderUpgradeMenu('modules');
+            this.updateUI();
         } else {
             this.showToast(result.message, 'error');
         }
@@ -423,6 +544,12 @@ class Game {
     handleTravelStatus(status) {
         if (status.status === 'arrived') {
             this.showToast(`🚚 ${status.name}에 도착했습니다!`);
+            if (status.market) {
+                setTimeout(() => {
+                    this.showToast("🌑 유량 상인의 암시장을 발견했습니다!", 'success');
+                    this.openBlackMarket();
+                }, 1000);
+            }
             this.updateUI();
         } else if (status.status === 'event_triggered') {
             this.showToast("⚠️ 도중에 돌발 상황이 발생했습니다!", 'warning');
@@ -526,29 +653,88 @@ class Game {
     }
 
 
+    /** 동료 목록 렌더링 (시너지 정보 포함 - Phase 5) */
     renderCompanionList() {
-        const companions = this.dataManager.state.companions;
-        const target = document.getElementById('companion-list');
-        if (!target) return;
+        const state = this.dataManager.state;
+        const companions = state.discovered.companions || [];
+        const container = document.getElementById('companion-list');
+        if (!container) return;
 
-        if (companions.length === 0) {
-            target.innerHTML = '<p style="color:#666;">합류한 대원이 없습니다.</p>';
-            return;
-        }
+        const synergyInfo = this.getSynergyBonus();
 
-        let html = '';
-        companions.forEach(c => {
-            html += `
-                <div style="display:flex; align-items:center; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; margin-bottom:8px;">
-                    <div style="font-size:2rem; margin-right:15px;">${c.type === 'animal' ? '🐾' : '👤'}</div>
-                    <div style="flex:1; text-align:left;">
-                        <div style="font-weight:bold;">${c.name} <span style="font-size:0.7rem; color:#888;">[${c.rarity}]</span></div>
-                        <div style="font-size:0.7rem; color:var(--accent-color);">${c.effect} x${c.bonus}</div>
+        let synergyHtml = '<div style="background:rgba(243, 156, 18, 0.1); padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid var(--accent-color);">';
+        synergyHtml += '<div style="font-size:0.8rem; font-weight:bold; margin-bottom:5px;">현재 활성화된 시너지</div>';
+
+        let activeSynergies = 0;
+        if (synergyInfo.damageReduction > 0) { synergyHtml += `<div>⚔️ 정예 파견 (Soldier x2): 피해 -${Math.round(synergyInfo.damageReduction * 100)}%</div>`; activeSynergies++; }
+        if (synergyInfo.energySave > 0) { synergyHtml += `<div>🔧 정비 팀 (Engineer x2): 소모 -${Math.round(synergyInfo.energySave * 100)}%</div>`; activeSynergies++; }
+        if (synergyInfo.scrapBonus > 0) { synergyHtml += `<div>🧬 탐구 루틴 (Researcher x2): 획득 +${Math.round(synergyInfo.scrapBonus * 100)}%</div>`; activeSynergies++; }
+        if (synergyInfo.speedBonus > 0) { synergyHtml += `<div>📡 선발대 (Scout x2): 시간 -${Math.round(synergyInfo.speedBonus * 100)}%</div>`; activeSynergies++; }
+
+        if (activeSynergies === 0) synergyHtml += '<div style="color:#666; font-size:0.75rem;">동일한 직업의 대원을 2명 이상 모으세요.</div>';
+        synergyHtml += '</div>';
+
+        let listHtml = synergyHtml + '<div style="display:grid; grid-template-columns:1fr; gap:8px;">';
+        companions.forEach(id => {
+            const comp = window.COMPANION_POOL.find(c => c.id === id);
+            if (!comp) return;
+            listHtml += `
+                <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="text-align:left;">
+                        <span style="color:${comp.color || '#fff'}; font-weight:bold;">[${comp.rarity}]</span> ${comp.name}
+                        <div style="font-size:0.7rem; color:#888;">${comp.role || '무직'} | ${comp.desc}</div>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
-        target.innerHTML = html;
+        listHtml += '</div>';
+        container.innerHTML = listHtml;
+    }
+
+    /** 📊 시너지 보너스 수치 계산 (System 2.0) */
+    getSynergyBonus() {
+        const state = this.dataManager.state;
+        const companions = state.discovered.companions || [];
+        const roles = {};
+        companions.forEach(id => {
+            const comp = window.COMPANION_POOL.find(c => c.id === id);
+            if (comp && comp.role) roles[comp.role] = (roles[comp.role] || 0) + 1;
+        });
+        return {
+            damageReduction: (roles['Soldier'] >= 2) ? 0.3 : 0,
+            energySave: (roles['Engineer'] >= 2) ? 0.1 : 0,
+            scrapBonus: (roles['Researcher'] >= 2) ? 0.2 : 0,
+            speedBonus: (roles['Scout'] >= 2) ? 0.15 : 0
+        };
+    }
+
+    /** 🏪 황무지 암시장 UI (Phase 6) */
+    openBlackMarket() {
+        const stock = window.blackMarketManager.stock;
+        let itemsHtml = '<div style="display:grid; gap:10px;">';
+        stock.forEach(item => {
+            itemsHtml += `
+                <div class="upgrade-card" style="padding:15px; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="text-align:left;">
+                        <div style="font-weight:bold;">${item.icon} ${item.name}</div>
+                        <div style="font-size:0.75rem; color:#888;">${item.desc}</div>
+                    </div>
+                    <button class="upgrade-btn ${this.dataManager.state.resources.scrap >= item.cost ? 'can-afford' : ''}" 
+                            onclick="window.game.handleBuyItem('${item.id}')">${item.cost}S</button>
+                </div>`;
+        });
+        itemsHtml += '</div>';
+        this.showModal("🌑 황무지 암시장", `<div style="padding:20px;"><p style="margin-bottom:15px;">유량 상인이 귀한 물건들을 보여줍니다.</p>${itemsHtml}</div>`);
+    }
+
+    handleBuyItem(id) {
+        const result = window.blackMarketManager.buyItem(id);
+        if (result.success) {
+            this.showToast(result.message, 'success');
+            this.openBlackMarket(); // 리스트 갱신
+            this.updateUI();
+        } else {
+            this.showToast(result.message, 'error');
+        }
     }
 
     showToast(message, type = 'info') {

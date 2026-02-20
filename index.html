@@ -24,10 +24,14 @@
             <!-- 환경 정보 -->
             <div id="region-info">
                 <span id="region-name">평온한 캠프</span>
+                <div id="weather-info"></div> <!-- 기후 표시 추가 -->
                 <div id="travel-progress" class="hidden">
                     <div id="progress-bar-fill"></div>
                 </div>
             </div>
+
+            <!-- 무전기 미션 버튼 -->
+            <button id="radio-mission-btn" class="hidden" onclick="window.game.openMissionModal()">📻 SOS 무전</button>
 
             <!-- 수동 탐사 버튼 -->
             <div id="scavenge-container">
@@ -65,7 +69,9 @@
     <script src="js/travelEvents.js"></script>
     <script src="js/travelManager.js"></script>
     <script src="js/battleManager.js"></script>
-    <script src="js/cookingManager.js"></script>
+    <script src="js/weatherManager.js"></script>
+    <script src="js/missionManager.js"></script>
+    <script src="js/blackMarketManager.js"></script>
     <script src="js/gachaManager.js"></script>
     <script src="js/main.js"></script>
 </body>

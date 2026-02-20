@@ -25,30 +25,56 @@ class CookingManager {
 
         const recipeMatch = SPECIAL_RECIPES.find(r =>
             r.ingredients.length === ingredientIds.length &&
-            r.ingredients.every(id => ingredientIds.includes(id))
+            // 순서 상관없이 모든 재료가 포함되어 있는지 확인
+            r.ingredients.every(id => ingredientIds.includes(id)) &&
+            ingredientIds.every(id => r.ingredients.includes(id))
         );
 
         let result;
         if (recipeMatch) {
-            result = recipeMatch;
+            result = { ...recipeMatch };
             // 도감 해금
             if (!state.discovered.recipes.includes(result.id)) {
                 state.discovered.recipes.push(result.id);
             }
         } else {
-            // 특별 레시피가 아니면 일반 '죽' 생성
+            // 특별 레시피가 아니면 절차적 요리 생성
+            const recovery = ingredientIds.length === 1 ? 5 : 10;
+            const ings = ingredientIds.map(id => INGREDIENTS[id]);
+            const method = COOKING_METHODS[Math.floor(Math.random() * COOKING_METHODS.length)];
+
+            let name = "";
+            let icon = "🍲";
+
+            if (ingredientIds.length === 1) {
+                name = `${ings[0].adj} ${ings[0].name} ${method.suffix}`;
+                icon = ings[0].icon;
+            } else {
+                // 재료가 2개인 경우
+                name = `${ings[0].name} ${ings[1].name} ${method.suffix}`;
+                icon = "🍲";
+            }
+
             result = {
-                id: 'porridge',
-                name: '황무지 죽',
-                icon: '🥣',
-                recovery: 20,
-                desc: '맛은 없지만 생존을 위해 먹습니다.'
+                id: `gen_${ingredientIds.sort().join('_')}`,
+                name: name,
+                icon: icon,
+                recovery: recovery,
+                desc: '황무지에서 모은 재료로 대충 만들어낸 요리입니다.'
             };
         }
 
-        // 인벤토리에 보관
-        if (!state.inventory.food[result.id]) state.inventory.food[result.id] = 0;
-        state.inventory.food[result.id]++;
+        // 인벤토리에 보관 (객체 형태로 저장하여 메타데이터 유지)
+        if (!state.inventory.food[result.id]) {
+            state.inventory.food[result.id] = {
+                count: 0,
+                name: result.name,
+                icon: result.icon,
+                recovery: result.recovery,
+                desc: result.desc
+            };
+        }
+        state.inventory.food[result.id].count++;
 
         dataManager.save();
         return { success: true, dish: result };
@@ -57,18 +83,39 @@ class CookingManager {
     /** 요리 섭취 (에너지 회복) */
     eat(foodId) {
         const state = dataManager.state;
-        if (!state.inventory.food[foodId] || state.inventory.food[foodId] <= 0) return { success: false };
+        const foodData = state.inventory.food[foodId];
 
-        const recipe = SPECIAL_RECIPES.find(r => r.id === foodId) || { id: 'porridge', recovery: 20 };
-        const recoveryAmount = recipe.recovery || 30;
+        if (!foodData) return { success: false };
 
-        state.inventory.food[foodId]--;
-        if (state.inventory.food[foodId] === 0) delete state.inventory.food[foodId];
+        // 객체 형태(count 포함) 또는 숫자 형태 대응
+        let count = (typeof foodData === 'object') ? foodData.count : foodData;
+        let recoveryAmount = (typeof foodData === 'object') ? (foodData.recovery || 10) : 10;
 
-        state.resources.energy = Math.min(100, state.resources.energy + recoveryAmount);
+        // 만약 숫자 형태인데 스페셜 레시피라면 데이터에서 찾아옴
+        if (typeof foodData !== 'object') {
+            const recipe = SPECIAL_RECIPES.find(r => r.id === foodId) || { recovery: 10 };
+            recoveryAmount = recipe.recovery || 10;
+        }
+
+        if (count <= 0) return { success: false };
+
+        // 개수 감소
+        if (typeof foodData === 'object') {
+            foodData.count--;
+            if (foodData.count <= 0) delete state.inventory.food[foodId];
+        } else {
+            state.inventory.food[foodId]--;
+            if (state.inventory.food[foodId] === 0) delete state.inventory.food[foodId];
+        }
+
+        // [모듈 효과] 특수 냉장고 보정 (Phase 3)
+        const fridgeBoost = window.vehicleManager ? window.vehicleManager.getModuleEffect('fridge') : 1;
+        const totalRecovery = Math.floor(recoveryAmount * fridgeBoost);
+
+        state.resources.energy = Math.min(100, state.resources.energy + totalRecovery);
         dataManager.save();
 
-        return { success: true, amount: recoveryAmount };
+        return { success: true, amount: totalRecovery };
     }
 
     openCookingMenu() {
