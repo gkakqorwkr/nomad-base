@@ -34,15 +34,10 @@ class Game {
         const tick = () => {
             const now = Date.now();
 
-            // 1. 자동 자원 생산 엔진 업데이트
-            if (this.farmingEngine && typeof this.farmingEngine.update === 'function') {
-                this.farmingEngine.update(now);
-            }
-
-            // 2. 이동 상태 업데이트
+            // 1. 이동 상태 업데이트
             const travelStatus = this.travelManager.update(now);
 
-            // 3. 이동 결과 처리
+            // 2. 이동 결과 처리
             if (travelStatus && travelStatus.status) {
                 this.handleTravelStatus(travelStatus);
             }
