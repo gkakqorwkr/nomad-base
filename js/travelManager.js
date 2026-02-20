@@ -2,8 +2,6 @@
  * 노마드 베이스 - 이동 매니저
  * 지역 간의 이동 시간을 계산하고 괴수 조우 이벤트를 처리합니다.
  */
-// import { REGIONS } from './regions.js';
-// import { dataManager } from './dataManager.js';
 
 class TravelManager {
     /** 이동 시작 */
@@ -15,13 +13,13 @@ class TravelManager {
         if (state.currentRegionId === regionId) return { success: false, message: "이미 그곳에 있습니다." };
         if (state.travel.isMoving) return { success: false, message: "이미 이동 중입니다." };
 
-        // 해금 비용 확인 (나중에 구현 가능)
-        if (state.resources.scrap < targetRegion.unlockCost) {
+        // 해금 비용 확인
+        if (state.resources.scrap < (targetRegion.unlockCost || 0)) {
             return { success: false, message: `해금 비용 ${targetRegion.unlockCost} 고철이 부족합니다.` };
         }
 
-        // 엔진 레벨에 따른 이동 시간 단축 보너스 적용 (100% -> 1.0, 50% -> 0.5)
-        const bonus = vehicleManager.getBonus('engine') * 0.01;
+        // 엔진 레벨에 따른 이동 시간 단축 보너스 적용
+        const bonus = window.vehicleManager ? vehicleManager.getBonus('engine') * 0.01 : 1.0;
         const actualTime = targetRegion.travelTime * bonus;
 
         const now = Date.now();
@@ -29,7 +27,10 @@ class TravelManager {
             targetRegionId: regionId,
             startTime: now,
             endTime: now + (actualTime * 1000),
-            isMoving: true
+            isMoving: true,
+            bossEncountered: false,
+            isEventActive: false,
+            isBattleActive: false
         };
 
         dataManager.save();
@@ -39,14 +40,17 @@ class TravelManager {
     /** 이동 진행률 업데이트 및 완료 체크 */
     update(now) {
         const state = dataManager.state;
+        
+        // 이동 중이 아니거나 이벤트/전투 중이면 체크 중단
         if (!state.travel.isMoving || state.travel.isEventActive || state.travel.isBattleActive) return null;
 
-        // 보스 조우 체크 (중간 지점에서 90% 확률로 발생하도록 설정)
         const total = state.travel.endTime - state.travel.startTime;
         const current = now - state.travel.startTime;
         const progress = current / total;
 
         const targetRegion = REGIONS.find(r => r.id === state.travel.targetRegionId);
+
+        // 1. 보스 조우 체크
         if (targetRegion && targetRegion.boss && progress >= 0.5 && !state.travel.bossEncountered) {
             state.travel.isBattleActive = true;
             state.travel.bossEncountered = true;
@@ -54,14 +58,13 @@ class TravelManager {
             return { status: 'boss_triggered', boss: targetRegion.boss };
         }
 
-        // 도착 체크
+        // 2. 도착 체크 (시간 완료 시)
         if (now >= state.travel.endTime) {
-            this.completeTravel();
-            return { status: 'arrived', regionId: state.currentRegionId };
+            return this.completeTravel();
         }
 
-        // 일반 돌발 이벤트 (보스 지역이 아닐 때만)
-        if (!targetRegion.boss && Math.random() < 0.01) {
+        // 3. 일반 돌발 이벤트 (낮은 확률)
+        if (targetRegion && !targetRegion.boss && Math.random() < 0.005) {
             state.travel.isEventActive = true;
             dataManager.save();
             return { status: 'event_triggered' };
@@ -70,14 +73,49 @@ class TravelManager {
         return { status: 'moving', progress: Math.min(1, progress) };
     }
 
-    /** 연계 처리 (전투 승리 후 호출) */
+    /** 도착 처리 */
+    completeTravel() {
+        const state = dataManager.state;
+        
+        // 데이터 업데이트: 현재 지역을 목적지로 변경
+        state.currentRegionId = state.travel.targetRegionId; 
+        
+        // 이동 상태 초기화
+        state.travel.isMoving = false;
+        state.travel.startTime = 0;
+        state.travel.endTime = 0;
+        state.travel.targetRegionId = null;
+        state.travel.bossEncountered = false;
+        
+        dataManager.save(); 
+        return { status: 'arrived' };
+    }
+
+    /** 강제 종료 및 상태 초기화 (오류 복구용) */
+    finishTravel() {
+        const state = dataManager.state;
+        state.travel.isMoving = false;
+        state.travel.isEventActive = false;
+        state.travel.isBattleActive = false;
+        state.travel.targetRegionId = null;
+        state.travel.startTime = 0;
+        state.travel.endTime = 0;
+        dataManager.save();
+    }
+
+    /** 현재 위치 데이터 반환 */
+    getCurrentRegion() {
+        return REGIONS.find(r => r.id === dataManager.state.currentRegionId) || REGIONS[0];
+    }
+
+    /** 전투 승리 후 이동 재개 */
     resumeAfterBattle() {
         const state = dataManager.state;
         state.travel.isBattleActive = false;
         dataManager.save();
     }
 
-    /** 이벤트 해결 처리 */
+    /** 이벤트 해결 후 이동 재개 */
     resumeTravel(penaltyTime = 0) {
         const state = dataManager.state;
         state.travel.isEventActive = false;
@@ -86,27 +124,7 @@ class TravelManager {
         }
         dataManager.save();
     }
-
-    /** 도착 처리 */
-// TravelManager.js 내부의 update 메서드 혹은 도착 처리 부분
-completeTravel() {
-    const state = this.dataManager.state;
-    // 실제로 데이터 매니저의 상태를 목적지 ID로 변경
-    state.currentRegionId = state.travel.targetRegionId; 
-    state.travel.isMoving = false;
-    state.travel.startTime = 0;
-    state.travel.endTime = 0;
-    
-    this.dataManager.save(); // 변경된 지역 저장
-    return { status: 'arrived' };
 }
 
-    /** 현재 위치 데이터 */
-    getCurrentRegion() {
-        return REGIONS.find(r => r.id === dataManager.state.currentRegionId);
-    }
-}
-
-// export const travelManager = new TravelManager();
+// 전역 할당
 window.travelManager = new TravelManager();
-
