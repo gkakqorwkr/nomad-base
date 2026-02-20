@@ -8,51 +8,61 @@ class CookingManager {
     }
 
     /** 요리하기 */
+    /** 요리하기 */
     cook(ingredientIds) {
         const state = dataManager.state;
 
         if (ingredientIds.length === 0) return { success: false, message: "재료를 선택해주세요!" };
 
-        // 재료 소모 체크
+        // 1. 재료 소모 체크
         for (const id of ingredientIds) {
             if (!state.inventory.ingredients[id] || state.inventory.ingredients[id] <= 0) {
                 return { success: false, message: "재료가 부족합니다!" };
             }
         }
 
-        // 재료 실제 소모
+        // 2. 재료 실제 소모
         ingredientIds.forEach(id => {
             state.inventory.ingredients[id] -= 1;
         });
 
-        // 레시피 일치 확인
+        // 3. 레시피 일치 확인 (SPECIAL_RECIPES 우선 순위)
         const recipeMatch = SPECIAL_RECIPES.find(r =>
             r.ingredients.length === ingredientIds.length &&
             r.ingredients.every(id => ingredientIds.includes(id))
         );
 
         let result;
+
         if (recipeMatch) {
-            // [변경] 레시피 도감 등재 요리: 에너지 35
+            // 정해진 레시피가 있는 경우
             result = { ...recipeMatch, recovery: 35 };
             if (!state.discovered.recipes.includes(result.id)) {
                 state.discovered.recipes.push(result.id);
             }
         } else {
-            // [변경] 일반 요리 밸런스 (1개: 15, 2개: 25)
-            const recoveryAmount = ingredientIds.length === 2 ? 25 : 15;
+            // 4. [핵심 수정] 자유 조합 시스템 (기상천외한 요리 생성)
+            const ings = ingredientIds.map(id => INGREDIENTS[id]);
+            
+            // 이름 조합: 첫 번째 재료의 형용사(adj) + 두 번째 재료의 이름(name) + 랜덤 조리법
+            const firstAdj = ings[0].adj || "수상한";
+            const secondName = ings[1] ? ings[1].name : ings[0].name;
+            const method = COOKING_METHODS[Math.floor(Math.random() * COOKING_METHODS.length)].suffix;
+            
+            // 회복량: 재료들의 power 합산
+            const totalPower = ings.reduce((sum, curr) => sum + (curr.power || 10), 0);
+
             result = {
-                id: 'porridge',
-                name: '황무지 죽',
-                icon: '🥣',
-                recovery: recoveryAmount,
-                desc: `와... 진짜 먹는다고? (에너지 +${recoveryAmount})`
+                id: `custom_${ingredientIds.sort().join('_')}`, // 조합마다 고유 ID 생성
+                name: `${firstAdj} ${secondName} ${method}`,
+                icon: ings[0].type === 'meat' ? '🍲' : '🥗', // 대략적인 아이콘 설정
+                recovery: totalPower,
+                desc: `${ings.map(i => i.icon).join(' ')} 조합으로 연금술을 부렸습니다.`
             };
         }
 
-        // 인벤토리에 보관 (아이템별로 recovery 수치를 다르게 저장하기 위해 객체 구조 활용 권장이나, 
-        // 현재 구조 유지를 위해 별도의 ID 생성 또는 범용 처리)
-        const foodKey = recipeMatch ? result.id : `porridge_${result.recovery}`;
+        // 5. 인벤토리에 보관 (이제 고유 ID를 키값으로 사용하여 모든 요리가 다르게 저장됨)
+        const foodKey = result.id;
         
         if (!state.inventory.food[foodKey]) {
             state.inventory.food[foodKey] = { 
@@ -136,5 +146,6 @@ class CookingManager {
 }
 
 window.cookingManager = new CookingManager();
+
 
 
