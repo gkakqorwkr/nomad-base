@@ -12,7 +12,8 @@ class DataManager {
             resources: {
                 scrap: 50,     // 시작 시 가챠 한 번 가능하도록
                 energy: 100,
-                mutogen: 0
+                mutogen: 0,
+                radiation: 0   // [신규] 방사능 수치 (0-100)
             },
             inventory: {
                 ingredients: {}, // { id: count }
@@ -44,7 +45,13 @@ class DataManager {
                     armor: { level: 1, name: '녹슨 철판' },
                     storage: { level: 1, name: '작은 상자' }
                 },
-                modules: {}      // { id: { level: 1, ... } }
+                modules: {},      // { id: { level: 1, ... } },
+                fortification: {  // [신규] 거점 영구 강화
+                    armor_plate: 0,  // 피해 감소
+                    overload_engine: 0, // 이동 속도
+                    rad_purifier: 0,  // 방사능 정화
+                    heavy_turret: 0   // 공격력 2배
+                }
             },
             world: {
                 weather: "clear", // clear, acid_rain, emp_storm, sandstorm

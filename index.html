@@ -15,12 +15,19 @@
         <div id="resource-bar">
             <span>고철: <strong id="scrap-value">0</strong></span>
             <span>에너지: <strong id="energy-value">100</strong></span>
+            <div style="display:flex; flex-direction:column; align-items:center; margin-left:10px;">
+                <div class="radiation-bar">
+                    <div id="radiation-fill"></div>
+                </div>
+                <span style="font-size:0.6rem; color:#00ff00; margin-top:2px;">RADIATION</span>
+            </div>
             <div id="reset-game" onclick="if(confirm('데이터를 초기화하시겠습니까?')) window.dataManager.reset()" title="게임 초기화">☠️
             </div>
         </div>
 
         <!-- 메인 시뮬레이션 영역 (트럭 배경) -->
         <div id="main-view">
+            <div id="hit-overlay"></div>
             <!-- 환경 정보 -->
             <div id="region-info">
                 <span id="region-name">평온한 캠프</span>

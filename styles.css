@@ -77,13 +77,80 @@ body {
 #main-view {
     flex: 1;
     position: relative;
-    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('assets/background.png') center/cover no-repeat;
+    background-image: url('assets/bg_atlas.png');
+    background-size: 200% 200%;
+    /* 4분할 이미지용 */
+    background-position: 0 0;
+    /* 기본: 평온한 캠프 */
+    background-repeat: no-repeat;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     image-rendering: pixelated;
-    /* 도트 감성 유지 */
+    transition: background-position 0.5s ease-in-out;
+}
+
+/* 피격 연출용 오버레이 및 애니메이션 */
+#hit-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 0, 0, 0);
+    pointer-events: none;
+    z-index: 100;
+    transition: background 0.1s;
+}
+
+.hit-active #hit-overlay {
+    background: rgba(255, 0, 0, 0.4);
+}
+
+.hit-active {
+    animation: shake 0.3s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+@keyframes shake {
+
+    10%,
+    90% {
+        transform: translate3d(-2px, 0, 0);
+    }
+
+    20%,
+    80% {
+        transform: translate3d(4px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+        transform: translate3d(-8px, 0, 0);
+    }
+
+    40%,
+    60% {
+        transform: translate3d(8px, 0, 0);
+    }
+}
+
+/* 지역별 배경 위치 매핑 */
+.bg-reg_1 {
+    background-position: 0 0 !important;
+}
+
+.bg-reg_2 {
+    background-position: 100% 0 !important;
+}
+
+.bg-reg_3 {
+    background-position: 0 100% !important;
+}
+
+.bg-reg_4 {
+    background-position: 100% 100% !important;
 }
 
 #truck-animation {

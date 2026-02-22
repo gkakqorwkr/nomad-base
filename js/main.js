@@ -60,7 +60,24 @@ class Game {
 
         document.getElementById('scrap-value').textContent = currentScrap.toLocaleString(); // 세자리 콤마 추가
         document.getElementById('energy-value').textContent = currentEnergy;
-        document.getElementById('region-name').textContent = this.travelManager.getCurrentRegion().name;
+
+        const region = this.travelManager.getCurrentRegion();
+        document.getElementById('region-name').textContent = region.name;
+
+        // [신규] 배경 전환
+        const mainView = document.getElementById('main-view');
+        // 기존 배경 클래스 제거 후 새 클래스 추가
+        window.REGIONS.forEach(r => mainView.classList.remove(`bg-${r.id}`));
+        mainView.classList.add(`bg-${region.id}`);
+
+        // [신규] 방사능 바 업데이트
+        const radFill = document.getElementById('radiation-fill');
+        if (radFill) {
+            const radPercent = state.resources.radiation || 0;
+            radFill.style.width = radPercent + '%';
+            // 수치에 따라 색상 변경 (노랑 -> 빨강)
+            radFill.style.background = radPercent > 70 ? '#ff4444' : (radPercent > 30 ? '#ffeb3b' : '#00ff00');
+        }
 
         // 기후 표시 업데이트
         const currentWeather = window.weatherManager ? window.weatherManager.getCurrentWeather() : null;
@@ -117,6 +134,14 @@ class Game {
         }
 
         state.resources.energy -= energyCost;
+
+        // [신규] 탐색 중 적 조우 체크 (20% 확률)
+        if (Math.random() < 0.2 && region.enemies && region.enemies.length > 0) {
+            const enemy = region.enemies[Math.floor(Math.random() * region.enemies.length)];
+            this.showToast(`⚠️ 정찰 중 ${enemy.name}과 마주쳤습니다!`, 'warning');
+            this.openBattleMenu(enemy); // 보스전과 동일한 메뉴 재사용
+            return;
+        }
 
         // 1. 패널티 계산
         let damage = 0;
@@ -532,7 +557,19 @@ class Game {
         const result = this.vehicleManager.upgradeModule(id);
         if (result.success) {
             this.showToast(result.message, 'success');
-            this.renderUpgradeMenu('modules');
+            this.vehicleManager.openUpgradeMenu('modules');
+            this.updateUI();
+        } else {
+            this.showToast(result.message, 'error');
+        }
+    }
+
+    /** [신규] 거점 강화 핸들러 */
+    handleFortUpgrade(key) {
+        const result = this.vehicleManager.upgradeFortification(key);
+        if (result.success) {
+            this.showToast(result.message, 'success');
+            this.vehicleManager.openUpgradeMenu('fort');
             this.updateUI();
         } else {
             this.showToast(result.message, 'error');
@@ -759,6 +796,17 @@ class Game {
     closeModal() {
         const modal = document.getElementById('modal-container');
         if (modal) modal.classList.add('hidden');
+    }
+
+    /** [신규] 피격 연출 (화면 흔들림 및 붉은 틴트) */
+    triggerHitEffect() {
+        const container = document.getElementById('game-container');
+        if (!container) return;
+
+        container.classList.add('hit-active');
+        setTimeout(() => {
+            container.classList.remove('hit-active');
+        }, 300); // 애니메이션 시간과 일치
     }
 }
 

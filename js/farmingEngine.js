@@ -17,12 +17,31 @@ class FarmingEngine {
 
     update(dt) {
         const state = dataManager.state;
+        if (!state) return;
+
+        // 1. [신규] 방사능 축적 및 정화
+        const currentRegion = REGIONS.find(r => r.id === state.currentRegionId) || REGIONS[0];
+        const baseRadRate = currentRegion.radRate || 0.01;
+
+        // 거점 강화: 방사능 정화조 (축적 속도 감소 및 자동 정화)
+        let radPurify = 0;
+        if (state.vehicle.fortification && state.vehicle.fortification.rad_purifier > 0) {
+            radPurify = state.vehicle.fortification.rad_purifier * 0.05; // 단계당 0.05 정화
+        }
+
+        const netRadChange = (baseRadRate - radPurify) * dt;
+        state.resources.radiation = Math.max(0, Math.min(100, (state.resources.radiation || 0) + netRadChange));
+
+        // 2. [신규] 방사능 패널티 (방사능 50 이상일 때 에너지 추가 소모)
+        if (state.resources.radiation > 50) {
+            const radPenalty = (state.resources.radiation - 50) * 0.01 * dt;
+            state.resources.energy = Math.max(0, state.resources.energy - radPenalty);
+        }
+
+        // 3. 자원 획득 (기존 로직)
         if (state.travel && state.travel.isMoving) return;
 
         const companions = this.getActiveCompanionData();
-        const currentRegion = REGIONS.find(r => r.id === state.currentRegionId) || REGIONS[0];
-
-        // 동료 보너스 + 유물 보너스
         let companionBonus = 1.0;
         companions.forEach(c => companionBonus += (c.bonus - 1.0));
 
@@ -31,8 +50,8 @@ class FarmingEngine {
 
         state.resources.scrap += this.BASE_SCRAP_RATE * totalMultiplier * dt;
 
-        if (Math.floor(Date.now() / 1000) % 10 === 0) dataManager.save();
-        window.dispatchEvent(new CustomEvent('gameUpdate'));
+        if (Math.floor(Date.now() / 1000) % 5 === 0) dataManager.save();
+        window.dispatchEvent(new CustomEvent('navUpdate')); // UI 갱신용 이벤트
     }
 
     /** 수동 탐사 행위 (Scavenge) */

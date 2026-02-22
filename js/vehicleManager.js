@@ -51,6 +51,14 @@ window.VEHICLE_MODULES = {
     fridge: { name: "특수 냉장고", icon: "🧊", desc: "요리 섭취 시 에너지 회복량이 증폭됩니다.", maxLevel: 5, cost: { scrap: 400 }, baseEffect: 1.1, bonusPerLevel: 0.2 }
 };
 
+/** 🏠 거점 영구 강화 데이터 (고철 대량 소모용) */
+window.FORTIFICATION_UPGRADES = {
+    armor_plate: { name: "전술 장갑 보강", icon: "🛡️", desc: "전투 시 에너지 피해를 영구적으로 감소시킵니다.", cost: 30000, costStep: 20000, maxLevel: 5 },
+    overload_engine: { name: "엔진 과부하 모듈", icon: "⚡", desc: "이동 시간을 영구적으로 단축시킵니다.", cost: 50000, costStep: 30000, maxLevel: 5 },
+    rad_purifier: { name: "방사능 정화조", icon: "💎", desc: "방사능 축적을 늦추고 자동으로 정화합니다.", cost: 40000, costStep: 25000, maxLevel: 5 },
+    heavy_turret: { name: "대구경 포탑", icon: "⚔️", desc: "전투 시 대미지를 2배 이상 강화합니다.", cost: 80000, costStep: 50000, maxLevel: 3 }
+};
+
 class VehicleManager {
     /** 특정 부품 업그레이드 시도 */
     upgradePart(partKey) {
@@ -95,6 +103,102 @@ class VehicleManager {
         } else {
             return { success: false, message: `고철이 부족합니다! (${cost}S 필요)` };
         }
+    }
+
+    /** [신규] 거점 강화 업그레이드 */
+    upgradeFortification(key) {
+        const state = dataManager.state;
+        const upgrade = window.FORTIFICATION_UPGRADES[key];
+        if (!upgrade) return { success: false, message: "강화 정보를 찾을 수 없습니다." };
+
+        const currentLevel = state.vehicle.fortification[key] || 0;
+        if (currentLevel >= upgrade.maxLevel) return { success: false, message: "이미 한계치까지 강화되었습니다!" };
+
+        const currentCost = upgrade.cost + (currentLevel * upgrade.costStep);
+        if (state.resources.scrap >= currentCost) {
+            state.resources.scrap -= currentCost;
+            state.vehicle.fortification[key] = currentLevel + 1;
+            dataManager.save();
+            return { success: true, message: `${upgrade.name} (Lv.${currentLevel + 1}) 강화 성공!` };
+        } else {
+            return { success: false, message: `고철이 부족합니다! (${currentCost.toLocaleString()}S 필요)` };
+        }
+    }
+
+    /** 차량/거점 업그레이드 메뉴 통합 렌더링 */
+    openUpgradeMenu(tab = 'parts') {
+        const state = dataManager.state;
+        let html = `
+            <div style="padding:15px;">
+                <div style="display:flex; gap:5px; margin-bottom:15px;">
+                    <button onclick="window.vehicleManager.openUpgradeMenu('parts')" style="flex:1; padding:10px; font-size:0.8rem; background:${tab === 'parts' ? 'var(--accent-color)' : '#333'}; border:none; border-radius:5px; color:white; cursor:pointer;">부품</button>
+                    <button onclick="window.vehicleManager.openUpgradeMenu('modules')" style="flex:1; padding:10px; font-size:0.8rem; background:${tab === 'modules' ? 'var(--accent-color)' : '#333'}; border:none; border-radius:5px; color:white; cursor:pointer;">모듈</button>
+                    <button onclick="window.vehicleManager.openUpgradeMenu('fort')" style="flex:1; padding:10px; font-size:0.8rem; background:${tab === 'fort' ? '#e74c3c' : '#333'}; border:none; border-radius:5px; color:white; cursor:pointer;">거점강화</button>
+                </div>
+                <div style="max-height:50vh; overflow-y:auto;">
+        `;
+
+        if (tab === 'parts') {
+            this.getVehicleSummary().forEach(p => {
+                const nxt = p.next;
+                html += `
+                    <div class="upgrade-card" style="margin-bottom:10px; padding:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="text-align:left;">
+                                <div style="font-weight:bold;">${p.icon} ${p.name} (Lv.${p.current.level})</div>
+                                <div style="font-size:0.7rem; color:#888;">${p.effectName}: ${p.current.bonus}${p.unit} ${nxt ? `→ ${nxt.bonus}${p.unit}` : ''}</div>
+                            </div>
+                            <button class="upgrade-btn ${state.resources.scrap >= (nxt ? nxt.cost : Infinity) ? 'can-afford' : ''}" 
+                                    onclick="window.game.handleUpgrade('${p.key}')" ${nxt ? '' : 'disabled'}>
+                                ${nxt ? `${nxt.cost}S` : 'MAX'}
+                            </button>
+                        </div>
+                    </div>`;
+            });
+        } else if (tab === 'modules') {
+            Object.keys(window.VEHICLE_MODULES).forEach(id => {
+                const m = window.VEHICLE_MODULES[id];
+                const lv = state.vehicle.modules[id] || 0;
+                const isMax = lv >= m.maxLevel;
+                html += `
+                    <div class="upgrade-card" style="margin-bottom:10px; padding:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="text-align:left;">
+                                <div style="font-weight:bold;">${m.icon} ${m.name} (Lv.${lv})</div>
+                                <div style="font-size:0.7rem; color:#888;">${m.desc}</div>
+                            </div>
+                            <button class="upgrade-btn ${state.resources.scrap >= (isMax ? Infinity : m.cost.scrap) ? 'can-afford' : ''}" 
+                                    onclick="window.game.handleModuleUpgrade('${id}')" ${isMax ? 'disabled' : ''}>
+                                ${isMax ? 'MAX' : `${m.cost.scrap}S`}
+                            </button>
+                        </div>
+                    </div>`;
+            });
+        } else if (tab === 'fort') {
+            Object.keys(window.FORTIFICATION_UPGRADES).forEach(key => {
+                const u = window.FORTIFICATION_UPGRADES[key];
+                const lv = state.vehicle.fortification[key] || 0;
+                const isMax = lv >= u.maxLevel;
+                const cost = u.cost + (lv * u.costStep);
+                html += `
+                    <div class="upgrade-card" style="margin-bottom:10px; padding:15px; border-left:4px solid #e74c3c;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="text-align:left; flex:1; margin-right:10px;">
+                                <div style="font-weight:bold; color:#e74c3c;">${u.icon} ${u.name} (Lv.${lv}/${u.maxLevel})</div>
+                                <div style="font-size:0.75rem; color:#aaa; margin-top:3px;">${u.desc}</div>
+                            </div>
+                            <button class="upgrade-btn ${state.resources.scrap >= cost ? 'can-afford' : ''}" 
+                                    onclick="window.game.handleFortUpgrade('${key}')" ${isMax ? 'disabled' : ''} 
+                                    style="background:#c0392b; min-width:80px;">
+                                ${isMax ? 'MAX' : `${cost.toLocaleString()}S`}
+                            </button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        html += `</div></div>`;
+        window.game.showModal("🚛 개조 및 거점 관리", html);
     }
 
     /** 모듈 보너스 수치 계산 */
